@@ -1,255 +1,232 @@
 <!doctype html>
-
 <html>
+	<head>
+		<meta charset="utf-8">
+		<title>Framindmap</title>
+		<link rel="shortcut icon" href="favicon.ico">
+		<link rel="stylesheet" href="css/common.css">
+		<link rel="stylesheet" href="css/app.css">
+		<link rel="stylesheet" href="css/Aristo/jquery-ui-1.8.7.custom.css" />
+		<link rel="stylesheet" href="css/minicolors/jquery.miniColors.css">
+		<script id="template-float-panel" type="text/x-jquery-tmpl">
+			<div class="ui-widget ui-dialog ui-corner-all ui-widget-content float-panel no-select">
+				<div class="ui-dialog-titlebar ui-widget-header ui-helper-clearfix">
+					<span class="ui-dialog-title">${title}</span>
+					<a class="ui-dialog-titlebar-close ui-corner-all" href="#" role="button">
+						<span class="ui-icon"></span>
+					</a>
+				</div>
+				<div class="ui-dialog-content ui-widget-content">
+				</div>
+			</div>
+		</script>
 
-<head>
-<meta charset="utf-8">
-<title>Framindmap</title>
-    <link rel="shortcut icon" href="favicon.ico">
-<link rel="stylesheet" href="css/common.css">
-<link rel="stylesheet" href="css/app.css">
-<link rel="stylesheet" href="css/Aristo/jquery-ui-1.8.7.custom.css" />
-<link rel="stylesheet" href="css/minicolors/jquery.miniColors.css">
-<script id="template-float-panel" type="text/x-jquery-tmpl">
-<div class="ui-widget ui-dialog ui-corner-all ui-widget-content float-panel no-select">
-  <div class="ui-dialog-titlebar ui-widget-header ui-helper-clearfix">
-    <span class="ui-dialog-title">${title}</span>
-    <a class="ui-dialog-titlebar-close ui-corner-all" href="#" role="button">
-      <span class="ui-icon"></span>
-    </a>
-  </div>
-  <div class="ui-dialog-content ui-widget-content">
-  </div>
-</div>
-</script>
+		<script id="template-notification" type="text/x-jquery-tmpl">
+			<div class="notification">
+				{{if closeButton}}
+				<a href="#" class="close-button">x</a>
+				{{/if}}
+				{{if title}}
+				<h1 class="title">{{html title}}</h1>
+				{{/if}}
+				<div class="content">{{html content}}</div>
+			</div>
+		</script>
 
-<script id="template-notification" type="text/x-jquery-tmpl">
-<div class="notification">
-  {{if closeButton}}
-  <a href="#" class="close-button">x</a>
-  {{/if}}
-  {{if title}}
-  <h1 class="title">{{html title}}</h1>
-  {{/if}}
-  <div class="content">{{html content}}</div>
-</div>
-</script>
+		<script id="template-open-table-item" type="text/x-jquery-tmpl">
+			<tr>
+				<td><a class="title" href="#">${title}</a></td>
+				<td>${$item.format(dates.modified)}</td>
+				<td><a class="delete" href="#">Effacer</a></td>
+			</tr>
+		</script>
 
-<script id="template-open-table-item" type="text/x-jquery-tmpl">
-<tr>
-  <td><a class="title" href="#">${title}</a></td>
-  <td>${$item.format(dates.modified)}</td>
-  <td><a class="delete" href="#">Effacer</a></td>
-</tr>
-</script>
+		<script id="template-open" type="text/x-jquery-tmpl">
+			<div id="open-dialog" class="file-dialog" title="Ouvrir une carte mentale">
+				<h1>Stockage local</h1>
+				<p>Liste des cartes mentales enregistr&eacute;es dans le stockage local de votre navigateur. Cliquez sur le titre d'une carte pour l'ouvrir.</p>
+				<table class="localstorage-filelist">
+					<thead>
+						<tr>
+						<th class="title">Titre</th>
+						<th class="modified">Derni&egrave;re modification</th>
+						<th class="delete"></th>
+						</tr>
+					</thead>
+					<tbody class="document-list"></tbody>
+				</table>
+				<div class="seperator"></div>
+				<h1>Depuis un fichier</h1>
+				<p>Choisir une carte depuis le disque dur de l'ordinateur.</p>
+				<div class="file-chooser">
+					<input type="file" />
+				</div>
+			</div>
+		</script>
 
-<script id="template-open" type="text/x-jquery-tmpl">
-<div id="open-dialog" class="file-dialog" title="Ouvrir une carte mentale">
-  <h1>Stockage local</h1>
-  <p>Liste des cartes mentales enregistr&eacute;es dans le stockage local de votre navigateur. Cliquez sur le titre d'une carte pour l'ouvrir.</p>
-  <table class="localstorage-filelist">
-    <thead>
-      <tr>
-        <th class="title">Titre</th>
-        <th class="modified">Derni&egrave;re modification</th>
-        <th class="delete"></th>
-      </tr>
-    </thead>
-    <tbody class="document-list"></tbody>
-  </table>
-  <div class="seperator"></div>
-  <h1>Depuis un fichier</h1>
-  <p>Choisir une carte depuis le disque dur de l'ordinateur.</p>
-  <div class="file-chooser">
-    <input type="file" />
-  </div>
-</div>
-</script>
+		<script id="template-save" type="text/x-jquery-tmpl">
+			<div id="save-dialog" class="file-dialog" title="Enregistrer la carte mentale">
+				<h1>Stockage local</h1>
+				<p>Vous pouvez enregistrer votre carte dans le stockage local de votre navigateur. Attention, cette fonctionnalit&eacute; est exp&eacute;rimentale:  l'espace est limit&eacute; et il n'y a aucune garantie que votre navigateur conserve ce document ind&eacute;finiment.</p>
+				<button id="button-save-localstorage">Enregistrer</button>
+				<input type="checkbox" id="checkbox-autosave-localstorage">
+				<label for="checkbox-autosave-localstorage">Enregistrer automatiquement toutes les minutes.</label>
+				<div class="seperator"></div>
+				<h1>Dans un fichier</h1>
+				<p>Enregistrer la carte dans un fichier sur l'ordinateur.</p>
+				<div id="button-save-hdd">Enregistrer</div>
+			</div>
+		</script>
 
-<script id="template-save" type="text/x-jquery-tmpl">
-<div id="save-dialog" class="file-dialog" title="Enregistrer la carte mentale">
-  <h1>Stockage local</h1>
-  <p>Vous pouvez enregistrer votre carte dans le stockage local de votre navigateur. Attention, cette fonctionnalit&eacute; est exp&eacute;rimentale:  l'espace est limit&eacute; et il n'y a aucune garantie que votre navigateur conserve ce document ind&eacute;finiment.</p>
-  <button id="button-save-localstorage">Enregistrer</button>
-  <input type="checkbox" id="checkbox-autosave-localstorage">
-  <label for="checkbox-autosave-localstorage">Enregistrer automatiquement toutes les minutes.</label>
-  <div class="seperator"></div>
-  <h1>Dans un fichier</h1>
-  <p>Enregistrer la carte dans un fichier sur l'ordinateur.</p>
-  <div id="button-save-hdd">Enregistrer</div>
-</div>
-</script>
+		<script id="template-navigator" type="text/x-jquery-tmpl">
+			<div id="navigator">
+				<div class="active">
+					<div id="navi-content">
+						<div id="navi-canvas-wrapper">
+							<canvas id="navi-canvas"></canvas>
+							<div id="navi-canvas-overlay"></div>
+						</div>
+						<div id="navi-controls">
+							<span id="navi-zoom-level"></span>
+							<div class="button-zoom" id="button-navi-zoom-out"></div>
+							<div id="navi-slider"></div>
+							<div class="button-zoom" id="button-navi-zoom-in"></div>
+						</div>
+					</div>
+				</div>
+				<div class="inactive">
+				</div>
+			</div>
+		</script>
 
-<script id="template-navigator" type="text/x-jquery-tmpl">
-<div id="navigator">
-  <div class="active">
-    <div id="navi-content">
-      <div id="navi-canvas-wrapper">
-        <canvas id="navi-canvas"></canvas>
-        <div id="navi-canvas-overlay"></div>
-      </div>
-      <div id="navi-controls">
-        <span id="navi-zoom-level"></span>
-        <div class="button-zoom" id="button-navi-zoom-out"></div>
-        <div id="navi-slider"></div>
-        <div class="button-zoom" id="button-navi-zoom-in"></div>
-      </div>
-    </div>
-  </div>
-  <div class="inactive">
-  </div>
-</div>
-</script>
+		<script id="template-inspector" type="text/x-jquery-tmpl">
+			<div id="inspector">
+				<div id="inspector-content">
+					<table id="inspector-table">
+						<tr>
+							<td>Taille de police:</td>
+							<td>
+								<div class="buttonset buttons-very-small buttons-less-padding">
+									<button id="inspector-button-font-size-decrease">A-</button>
+									<button id="inspector-button-font-size-increase">A+</button>
+								</div>
+							</td>
+						</tr>
+						<tr>
+							<td>Style de police:</td>
+							<td>
+								<div class="font-styles buttonset buttons-very-small buttons-less-padding">
+									<input type="checkbox" id="inspector-checkbox-font-bold" /> 
+									<label for="inspector-checkbox-font-bold" id="inspector-label-font-bold">G</label>
+									<input type="checkbox" id="inspector-checkbox-font-italic" /> 
+									<label for="inspector-checkbox-font-italic" id="inspector-label-font-italic">I</label> 
+									<input type="checkbox" id="inspector-checkbox-font-underline" /> 
+									<label for="inspector-checkbox-font-underline" id="inspector-label-font-underline">S</label> 
+									<input type="checkbox" id="inspector-checkbox-font-linethrough" />
+									<label for="inspector-checkbox-font-linethrough" id="inspector-label-font-linethrough">B</label>
+								</div>
+							</td>
+						</tr>
+						<tr>
+							<td>Couleur de police:</td>
+							<td><input type="hidden" id="inspector-font-color-picker" class="colorpicker" /></td>
+						</tr>
+						<tr>
+							<td>Couleur de branche:</td>
+							<td>
+								<input type="hidden" id="inspector-branch-color-picker" class="colorpicker" />
+								<button id="inspector-button-branch-color-children" title="Appliquer la couleur de la branche &agrave; toutes les branches filles." class="right buttons-small buttons-less-padding">H&eacute;riter</button>
+							</td>
+						</tr>
+					</table>
+				</div>
+			</div>
+		</script>
 
+		<script id="template-export-map" type="text/x-jquery-tmpl">
+			<div id="export-map-dialog" title="Exporter une carte mentale">
+				<h2 class='image-description'>Cliquer-droit sur l'image pour enregsitrer la carte et choisir "Enregistrer l'image sous..."</h2>
+				<div id="export-preview"></div>
+			</div>
+		</script>
+	</head>
+	<body>
+		<div id="print-area">
+			<p class="print-placeholder">Utiliser l'option imprimer du menu carte mentale</p>
+		</div>
+		<div id="container">
+			<div id="topbar">
+				<div id="toolbar">
+					<div id="logo" class="logo-bg">
+						<a href="/" style="text-decoration: none" title="Retour à l'accueil"><span style="color: #6A5687;">Fra</span><span style="color: #9BAE5F;">mindmap</span></a>
+					</div>
+					<div class="buttons">
+						<span class="buttons-left"> </span> <span class="buttons-right"></span>
+					</div>
+				</div>
+			</div>
+			<div id="canvas-container">
+				<div id="drawing-area"></div>
+			</div>
+			<div id="bottombar">
+				<div id="about">
+					<a href="/" target="_blank">&Agrave; propos de Framindmap</a> <span style="padding: 0 4px;">|</span> <a style="font-weight: bold" href="http://contact.framasoft.org" target="_blank">Contact</a>
+				</div>
+				<div id="statusbar">
+					<div class="buttons buttons-right buttons-small buttons-less-padding"></div>
+				</div>
+			</div>
+		</div>
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
 
-<script id="template-inspector" type="text/x-jquery-tmpl">
-<div id="inspector">
-  <div id="inspector-content">
-    <table id="inspector-table">
-      <tr>
-        <td>Taille de police:</td>
-        <td><div
-            class="buttonset buttons-very-small buttons-less-padding">
-            <button id="inspector-button-font-size-decrease">A-</button>
-            <button id="inspector-button-font-size-increase">A+</button>
-          </div></td>
-      </tr>
-      <tr>
-        <td>Style de police:</td>
-        <td><div
-            class="font-styles buttonset buttons-very-small buttons-less-padding">
-            <input type="checkbox" id="inspector-checkbox-font-bold" /> 
-            <label
-            for="inspector-checkbox-font-bold" id="inspector-label-font-bold">G</label>
-              
-            <input type="checkbox" id="inspector-checkbox-font-italic" /> 
-            <label
-            for="inspector-checkbox-font-italic" id="inspector-label-font-italic">I</label> 
-            
-            <input
-            type="checkbox" id="inspector-checkbox-font-underline" /> 
-            <label
-            for="inspector-checkbox-font-underline" id="inspector-label-font-underline">S</label> 
-            
-            <input
-            type="checkbox" id="inspector-checkbox-font-linethrough" />
-             <label
-            for="inspector-checkbox-font-linethrough" id="inspector-label-font-linethrough">B</label>
-          </div>
-        </td>
-      </tr>
-      <tr>
-        <td>Couleur de police:</td>
-        <td><input type="hidden" id="inspector-font-color-picker"
-          class="colorpicker" /></td>
-      </tr>
-      <tr>
-        <td>Couleur de branche:</td>
-        <td><input type="hidden" id="inspector-branch-color-picker"
-          class="colorpicker" />
-		  <button id="inspector-button-branch-color-children" title="Appliquer la couleur de la branche &agrave; toutes les branches filles." class="right buttons-small buttons-less-padding">H&eacute;riter</button>
-		</td>
-      </tr>
-    </table>
-  </div>
-</div>
-</script>
+		<!-- JS:LIB:BEGIN -->
+		<script src="js/libs/jquery-ui-1.8.11.custom.min.js"></script>
+		<script src="js/libs/dragscrollable.js"></script>
+		<script src="js/libs/jquery.hotkeys.js"></script>
+		<script src="js/libs/jquery.mousewheel.js"></script>
+		<script src="js/libs/jquery.minicolors.js"></script>
+		<script src="js/libs/jquery.tmpl.js"></script>
+		<script src="js/libs/swfobject.js"></script>
+		<script src="js/libs/downloadify.min.js"></script>
+		<script src="js/libs/events.js"></script>
 
-<script id="template-export-map" type="text/x-jquery-tmpl">
-<div id="export-map-dialog" title="Exporter une carte mentale">
-  <h2 class='image-description'>Cliquer-droit sur l'image pour enregsitrer la carte et choisir "Enregistrer l'image sous..."</h2>
-  <div id="export-preview"></div>
-</div>
-</script>
-
-</head>
-<body>
-  <div id="print-area">
-    <p class="print-placeholder">Utiliser l'option imprimer du menu carte mentale</p>
-  </div>
-
-  <div id="container">
-    <div id="topbar">
-      <div id="toolbar">
-        <div id="logo" class="logo-bg">
-          <a href="/" style="text-decoration: none" title="Retour à l'accueil"><span style="color: #6A5687;">Fra</span><span style="color: #9BAE5F;">mindmap</span></a>
-        </div>
-
-        <div class="buttons">
-          <span class="buttons-left"> </span> <span class="buttons-right">
-          </span>
-        </div>
-
-      </div>
-    </div>
-    <div id="canvas-container">
-      <div id="drawing-area"></div>
-    </div>
-    <div id="bottombar">
-      <div id="about">
-        <a href="/" target="_blank">&Agrave; propos de Framindmap</a> <span
-          style="padding: 0 4px;">|</span> <a style="font-weight: bold"
-          href="http://contact.framasoft.org"
-          target="_blank">Contact</a>
-      </div>
-      <div id="statusbar">
-        <div
-          class="buttons buttons-right buttons-small buttons-less-padding"></div>
-      </div>
-    </div>
-  </div>
-  <script
-    src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
-
-
-  <!-- JS:LIB:BEGIN -->
-  <script src="js/libs/jquery-ui-1.8.11.custom.min.js"></script>
-  <script src="js/libs/dragscrollable.js"></script>
-  <script src="js/libs/jquery.hotkeys.js"></script>
-  <script src="js/libs/jquery.mousewheel.js"></script>
-  <script src="js/libs/jquery.minicolors.js"></script>
-  <script src="js/libs/jquery.tmpl.js"></script>
-  <script src="js/libs/swfobject.js"></script>
-  <script src="js/libs/downloadify.min.js"></script>
-  <script src="js/libs/events.js"></script>
-
-  <script src="js/MindMaps.js"></script>
-  <script src="js/Command.js"></script>
-  <script src="js/CommandRegistry.js"></script>
-  <script src="js/Action.js"></script>
-  <script src="js/Util.js"></script>
-  <script src="js/Point.js"></script>
-  <script src="js/Document.js"></script>
-  <script src="js/MindMap.js"></script>
-  <script src="js/Node.js"></script>
-  <script src="js/NodeMap.js"></script>
-  <script src="js/UndoManager.js"></script>
-  <script src="js/UndoController.js"></script>
-  <script src="js/ClipboardController.js"></script>
-  <script src="js/ZoomController.js"></script>
-  <script src="js/ShortcutController.js"></script>
-  <script src="js/HelpController.js"></script>
-  <script src="js/FloatPanel.js"></script>
-  <script src="js/Navigator.js"></script>
-  <script src="js/Inspector.js"></script>
-  <script src="js/ToolBar.js"></script>
-  <script src="js/StatusBar.js"></script>
-  <script src="js/CanvasDrawingTools.js"></script>
-  <script src="js/CanvasView.js"></script>
-  <script src="js/CanvasPresenter.js"></script>
-  <script src="js/ApplicationController.js"></script>
-  <script src="js/MindMapModel.js"></script>
-  <script src="js/NewDocument.js"></script>
-  <script src="js/OpenDocument.js"></script>
-  <script src="js/SaveDocument.js"></script>
-  <script src="js/MainViewController.js"></script>
-  <script src="js/Storage.js"></script>
-  <script src="js/Event.js"></script>
-  <script src="js/Notification.js"></script>
-  <script src="js/StaticCanvas.js"></script>
-  <script src="js/PrintController.js"></script>
-  <script src="js/ExportMap.js"></script>
-  <script src="js/AutoSaveController.js"></script>
-  <!-- JS:LIB:END -->
-</body>
+		<script src="js/MindMaps.js"></script>
+		<script src="js/Command.js"></script>
+		<script src="js/CommandRegistry.js"></script>
+		<script src="js/Action.js"></script>
+		<script src="js/Util.js"></script>
+		<script src="js/Point.js"></script>
+		<script src="js/Document.js"></script>
+		<script src="js/MindMap.js"></script>
+		<script src="js/Node.js"></script>
+		<script src="js/NodeMap.js"></script>
+		<script src="js/UndoManager.js"></script>
+		<script src="js/UndoController.js"></script>
+		<script src="js/ClipboardController.js"></script>
+		<script src="js/ZoomController.js"></script>
+		<script src="js/ShortcutController.js"></script>
+		<script src="js/HelpController.js"></script>
+		<script src="js/FloatPanel.js"></script>
+		<script src="js/Navigator.js"></script>
+		<script src="js/Inspector.js"></script>
+		<script src="js/ToolBar.js"></script>
+		<script src="js/StatusBar.js"></script>
+		<script src="js/CanvasDrawingTools.js"></script>
+		<script src="js/CanvasView.js"></script>
+		<script src="js/CanvasPresenter.js"></script>
+		<script src="js/ApplicationController.js"></script>
+		<script src="js/MindMapModel.js"></script>
+		<script src="js/NewDocument.js"></script>
+		<script src="js/OpenDocument.js"></script>
+		<script src="js/SaveDocument.js"></script>
+		<script src="js/MainViewController.js"></script>
+		<script src="js/Storage.js"></script>
+		<script src="js/Event.js"></script>
+		<script src="js/Notification.js"></script>
+		<script src="js/StaticCanvas.js"></script>
+		<script src="js/PrintController.js"></script>
+		<script src="js/ExportMap.js"></script>
+		<script src="js/AutoSaveController.js"></script>
+		<!-- JS:LIB:END -->
+	</body>
 </html>
