@@ -140,7 +140,7 @@ jQuery( document ).ready(function() {
             Tous les champs de ce formulaire sont requis pour le bon fonctionnement du logiciel.
             Cependant, il n'est pas nécessaire que vous nous donniez votre véritable identité.
         </p>
-        <p>Merci de vérifier les informations que vous avez saisies et de relire les <a href="/nav/html/cgu.html">Conditions Générales d'Utilisation</a>.</p>
+        <p>Merci de vérifier les informations que vous avez saisies et de relire les <a href="https://framasoft.org/nav/html/cgu.html">Conditions Générales d'Utilisation</a>.</p>
         <p>En cliquant sur le bouton « Créer le compte » ci-dessous, vous vous engagez à les respecter.</p>
         <p class="text-center">
             <input type="submit" value="Créer le compte"

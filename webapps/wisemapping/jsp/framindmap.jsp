@@ -40,11 +40,11 @@
                     </div>
                     <div class="modal-body">
                         <p><video controls="controls" preload="none"
-                                  width="558" height="387" poster="http://www.framatube.org/images/media/903l.jpg">
-                            <source src="http://www.framatube.org/files/1288-tutoriel-video-wisemapping-claire-cassaigne.mp4" type="video/mp4"/>
-                            <source src="http://www.framatube.org/files/1288-tutoriel-video-wisemapping-claire-cassaigne.webm" type="video/webm"/>
+                                  width="558" height="387" poster="https://www.framatube.org/images/media/903l.jpg">
+                            <source src="https://www.framatube.org/files/1288-tutoriel-video-wisemapping-claire-cassaigne.mp4" type="video/mp4"/>
+                            <source src="https://www.framatube.org/files/1288-tutoriel-video-wisemapping-claire-cassaigne.webm" type="video/webm"/>
                         </video></p>
-                        <p>-> La <a href="http://www.framatube.org/files/1288-tutoriel-video-wisemapping-claire-cassaigne.webm?download=1">vidéo</a> au format webm</p>
+                        <p>-&gt; La <a href="https://www.framatube.org/files/1288-tutoriel-video-wisemapping-claire-cassaigne.webm?download=1">vidéo</a> au format webm</p>
                    </div>
                    <div class="modal-footer"><a href="#" class="btn btn-default" data-dismiss="modal">Fermer</a></div>
                </div>
@@ -56,7 +56,7 @@
         <div class="col-md-4">
 		<h2>Le logiciel</h2>
                 <p class="text-center"><span class="glyphicon glyphicon-cloud" style="font-size:50px"></span></p>
-		<p>Framindmap repose sur le logciel libre <a href="http://www.wisemapping.com">Wisemapping</a>.</p>
+		<p>Framindmap repose sur le logiciel libre <a href="http://www.wisemapping.com">Wisemapping</a>.</p>
 		<p>Ce logiciel est compatible avec les navigateurs web suivants :</p>
 		<ul>
 			<li>Microsoft Internet Explorer 9+</li>

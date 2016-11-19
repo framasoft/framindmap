@@ -1,21 +1,30 @@
 <%@page pageEncoding="UTF-8" %>
 <%@include file="/jsp/init.jsp" %>
 
-<p class="alert alert-info">
-    <spring:message code="EXPORT_DETAILS"/>
-</p>
 
-<div>
+<div style="height: 400px; overflow-y: auto">
+    <div class="alert alert-info" role="alert">
+        <spring:message code="EXPORT_DETAILS"/>
+    </div>
+    <div class="alert alert-warning" role="alert">
+        Contrairement à ce qui est indiqué dans le tutoriel vidéo, <b>les exports en pdf ou en jpg/png ne fonctionnent pas</b> sur cette version de Wisemapping. Nous les avons donc désactivés. Si une version plus récente du logiciel corrige ce bug, nous les proposerons à nouveau.
+    </div>
     <form method="GET" class="form-horizontal" action="c/restful/maps/${mindmap.id}"
           enctype="application/x-www-form-urlencoded" id="dialogMainForm">
         <input name="svgXml" id="svgXml" value="" type="hidden"/>
         <input name="download" type="hidden" value="mm"/>
+        <input name="version" type="hidden" value=""/>
+        <input name="filename" type="hidden" value="${mindmap.title}"/>
         <fieldset>
-
             <label for="freemind">
-                <input type="radio" id="freemind" name="exportFormat" value="mm" checked="checked"/>
-                <strong>Freeplane/Freemind (.mm)</strong><br/>
-                Freeplane et FreeMind sont d'excellents logiciels libres de cartographie mentale en usage local.
+                <input type="radio" id="freemind" name="exportFormat" value="mm" version="1.0.1" checked="checked"/>
+                <strong>Freeplane/Freemind v1.0.1 (.mm)</strong>
+            </label>
+
+            <label for="freemind09">
+                <input type="radio" id="freemind09" name="exportFormat" value="mm" version="0.9.0"/>
+                <strong>Freeplane/Freemind v0.9 (.mm)</strong><br/>
+                Freeplane et FreeMind sont d’excellents logiciels libres de cartographie mentale en usage local.
             </label>
 
             <label for="wisemapping">
@@ -30,7 +39,7 @@
                 Le format .svg permet d'imprimer à n'importe quelle échelle sans perte de résolution.<br/>
             </label>
 
-<!--            <label for="pdf">
+            <!--<label for="pdf">
                 <input type="radio" name="exportFormat" value="pdf" id="pdf"/>
                 <strong><spring:message code="PDF_EXPORT_FORMAT"/></strong><br/>
                 <spring:message code="PDF_EXPORT_FORMAT_DETAILS"/>
@@ -45,7 +54,7 @@
                     <option value='png'>PNG</option>
                     <option value='jpg'>JPEG</option>
                 </select>
-            </label><br/>-->
+            </label>-->
 
             <label for="txt">
                 <input type="radio" name="exportFormat" value="txt" id="txt"/>
@@ -53,35 +62,47 @@
                 Exportez le contenu de votre carte dans un simple texte
             </label>
 
-<!--            </br><label for="xls">
+            <!--<label for="xls">
                 <input type="radio" name="exportFormat" value="xls" id="xls"/>
                 <strong><spring:message code="XLS_EXPORT_FORMAT"/></strong><br/>
-                Exportez votre carte au format Microsoft Excel (XLS) (malheureusement l'export en ODS ne fonctionne pas)
-            </label><br/>
+                <spring:message code="XLS_EXPORT_FORMAT_DETAILS"/>
+            </label>
 
             <label for="odt">
                 <input type="radio" name="exportFormat" value="odt" id="odt"/>
                 <strong><spring:message code="OPEN_OFFICE_EXPORT_FORMAT"/></strong><br/>
                 <spring:message code="OPEN_OFFICE_EXPORT_FORMAT_DETAILS"/>
             </label>-->
-
-
         </fieldset>
     </form>
+    <div id="exportInfo" style="margin-top: 19px;">
+        <span class="label label-danger">Warning</span> <spring:message code="EXPORT_FORMAT_RESTRICTIONS"/>
+    </div>
+
 </div>
 
 
-<p id="exportInfo">
-    <span class="label label-danger">Warning</span> <spring:message code="EXPORT_FORMAT_RESTRICTIONS"/>
-</p>
+<style>
+    h2 {
+        font-size: 160%;
+        color: #8e9181;
+    }
 
+    #dialogMainForm label {
+        font-weight:normal;
+        display: block;
+    }
 
+    #dialogMainForm label strong {
+        font-weight: 700;
+    }
+</style>
 <script type="text/javascript">
 
     // No way to obtain map svg. Hide panels..
-    if (window.location.pathname.indexOf('exportf') != -1) {
+    if (window.location.pathname.match(/\/[0-9]+\/edit/)) {
         $('#exportInfo').hide();
-        $('#freemind,#pdf,#svg,#odt,#txt,#xls,#mmap').click('click', function (event) {
+        $('#freemind,#freemind09,#pdf,#svg,#odt,#txt,#xls,#mmap').click('click', function (event) {
             $('#imgFormat').hide();
         });
 
@@ -97,7 +118,6 @@
         // If the map is opened, use the latest model ...
         var formatType = $('#dialogMainForm input:checked').attr('value');
         var form = $('#dialogMainForm');
-
         // Restore default ..
         form.attr('action', 'c/restful/maps/${mindmap.id}.' + formatType);
 
@@ -117,15 +137,16 @@
 
         }
 
-        $('#dialogMainForm input[name=download]').attr('value', formatType);
-        if (!differ) {
-            form.submit();
+        var version = $('#dialogMainForm input:checked').attr('version');
+        if (version) {
+            $('#dialogMainForm input[name=version]').attr('value', version);
         }
+
+        $('#dialogMainForm input[name=download]').attr('value', formatType);
+        form.submit();
 
         // Close dialog ...
         $('#export-dialog-modal').modal('hide');
-
-        return {"action":form.attr('action'), "method":form.attr('method'), formatType:formatType};
     }
 
 </script>

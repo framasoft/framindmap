@@ -16,7 +16,7 @@
 <meta name="description" content="">
 <meta name="author" content="">
 
-    <title>Framindmap -
+    <title>Framindmap - 
         <c:choose>
             <c:when test="${requestScope.viewTitle!=null}">
                 ${requestScope.viewTitle}
@@ -29,14 +29,14 @@
 
     <link rel="icon" href="images/favicon.ico" type="image/x-icon"/>
     <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon"/>
-    <script type="text/javascript" src="js/jquery-2.1.0.min.js"></script>
+    <script type="text/javascript" src="js/jquery.js"></script>
 
     <script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script>
     <script src="js/less.js" type="text/javascript"></script>
 
 </head>
 <body>
-<script src="/nav/nav.js" type="text/javascript"></script>
+<script src="https://framasoft.org/nav/nav.js" type="text/javascript"></script>
 <div id="pageContainer">
     <jsp:include page="header.jsp">
         <jsp:param name="removeSignin" value="${requestScope.removeSignin}"/>
@@ -49,7 +49,7 @@
                 </div>
             </div>
         </div>
-        <jsp:include page="footer.jsp"/>
+        <jsp:include page="footer.jsp"/>                
     </main>
     </div>
 </div>
