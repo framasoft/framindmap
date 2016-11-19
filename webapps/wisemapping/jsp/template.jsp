@@ -33,7 +33,6 @@
 
     <script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script>
     <script src="js/less.js" type="text/javascript"></script>
-
 </head>
 <body>
 <script src="https://framasoft.org/nav/nav.js" type="text/javascript"></script>

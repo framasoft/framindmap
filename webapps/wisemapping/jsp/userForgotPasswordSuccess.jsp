@@ -10,5 +10,5 @@
 </p>
 
 <p>
-    Si vous rencontrez un problème pour recevoir cet email, contactez-nous depuis <a href="http://contact.framasoft.org">ce formulaire</a>.
+    Si vous rencontrez un problème pour recevoir cet email, contactez-nous depuis <a href="http://contact.framasoft.org/#framindmap">ce formulaire</a>.
 </p>
