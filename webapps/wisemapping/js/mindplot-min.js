@@ -11,7 +11,31 @@ mindplot.collaboration.framework={};
 mindplot.persistence={};
 mindplot.layout={};
 Class.Mutators.Static=function(a){this.extend(a)
-};var web2d={};
+};mindplot.Events=new Class({$events:{},_removeOn:function(a){return a.replace(/^on([A-Z])/,function(b,c){return c.toLowerCase()
+})
+},addEvent:function(c,b,a){c=this._removeOn(c);
+this.$events[c]=(this.$events[c]||[]).include(b);
+if(a){b.internal=true
+}return this
+},fireEvent:function(d,b,a){d=this._removeOn(d);
+var c=this.$events[d];
+if(!c){return this
+}b=Array.from(b);
+_.each(c,function(e){if(a){e.delay(a,this,b)
+}else{e.apply(this,b)
+}},this);
+return this
+},removeEvent:function(d,c){d=this._removeOn(d);
+var b=this.$events[d];
+if(b&&!c.internal){var a=b.indexOf(c);
+if(a!=-1){b.splice(a,1)
+}}return this
+}});Options=new Class({setOptions:function(){var a=this.options=Object.merge.apply(null,[{},this.options].append(arguments));
+if(this.addEvent){for(var b in a){if(typeOf(a[b])!="function"||!(/^on[A-Z]/).test(b)){continue
+}this.addEvent(b,a[b]);
+delete a[b]
+}}return this
+}});var web2d={};
 web2d.peer={svg:{}};
 web2d.peer.utils={};web2d.peer.utils.EventUtils={broadcastChangeEvent:function(elementPeer,type){var listeners=elementPeer.getChangeEventListeners(type);
 if($defined(listeners)){for(var i=0;
@@ -43,7 +67,7 @@ this._children=result
 }return result
 },getParent:function(){return this._parent
 },setParent:function(parent){this._parent=parent
-},appendChild:function(elementPeer){elementPeer.setParent(this);
+},append:function(elementPeer){elementPeer.setParent(this);
 var children=this.getChildren();
 children.include(elementPeer);
 this._native.appendChild(elementPeer._native);
@@ -54,10 +78,10 @@ var oldLength=children.length;
 children.erase(elementPeer);
 $assert(children.length<oldLength,"element could not be removed:"+elementPeer);
 this._native.removeChild(elementPeer._native)
-},addEvent:function(type,listener){this._native.addEvent(type,listener)
-},fireEvent:function(type,event){this._native.fireEvent(type,event)
+},addEvent:function(type,listener){$(this._native).bind(type,listener)
+},trigger:function(type,event){$(this._native).trigger(type,event)
 },cloneEvents:function(from){this._native.cloneEvents(from)
-},removeEvent:function(type,listener){this._native.removeEvent(type,listener)
+},removeEvent:function(type,listener){$(this._native).unbind(type,listener)
 },setSize:function(width,height){if($defined(width)&&this._size.width!=parseInt(width)){this._size.width=parseInt(width);
 this._native.setAttribute("width",parseInt(width))
 }if($defined(height)&&this._size.height!=parseInt(height)){this._size.height=parseInt(height);
@@ -100,9 +124,6 @@ if(!$defined(listener)){throw"Listener can not be null"
 if(!$defined(listeners)){listeners=[];
 this._changeListeners[type]=listeners
 }return listeners
-},positionRelativeTo:function(elem,options){options=!$defined(options)?{}:options;
-options.relativeTo=$(this._native);
-elem.position(options)
 },moveToFront:function(){this._native.parentNode.appendChild(this._native)
 },moveToBack:function(){this._native.parentNode.insertBefore(this._native,this._native.parentNode.firstChild)
 },setCursor:function(type){this._native.style.cursor=type
@@ -293,25 +314,26 @@ this._native.setAttribute("d",path)
 this.parent(svgElement);
 this._position={x:0,y:0};
 this._font=new web2d.Font("Arial",this)
-},appendChild:function(element){this._native.appendChild(element._native)
+},append:function(element){this._native.appendChild(element._native)
 },setTextAlignment:function(align){this._textAlign=align
 },getTextAlignment:function(){return $defined(this._textAlign)?this._textAlign:"left"
 },setText:function(text){while(this._native.firstChild){this._native.removeChild(this._native.firstChild)
 }this._text=text;
 if(text){var lines=text.split("\n");
-lines.forEach(function(line){var tspan=window.document.createElementNS(this.svgNamespace,"tspan");
+var me=this;
+lines.forEach(function(line){var tspan=window.document.createElementNS(me.svgNamespace,"tspan");
 tspan.setAttribute("dy","1em");
-tspan.setAttribute("x",this.getPosition().x);
+tspan.setAttribute("x",me.getPosition().x);
 tspan.textContent=line.length==0?" ":line;
-this._native.appendChild(tspan)
-}.bind(this))
+me._native.appendChild(tspan)
+})
 }},getText:function(){return this._text
 },setPosition:function(x,y){this._position={x:x,y:y};
 this._native.setAttribute("y",y);
 this._native.setAttribute("x",x);
-this._native.getElements("tspan").forEach(function(span){span.setAttribute("x",x)
-})
+$(this._native).children("tspan").attr("x",x)
 },getPosition:function(){return this._position
+},getNativePosition:function(){return $(this._native).position()
 },setFont:function(font,size,style,weight){if($defined(font)){this._font=new web2d.Font(font,this)
 }if($defined(style)){this._font.setStyle(style)
 }if($defined(weight)){this._font.setWeight(weight)
@@ -356,7 +378,7 @@ var svgElement=window.document.createElementNS(this.svgNamespace,"svg");
 this.parent(svgElement);
 this._native.setAttribute("focusable","true");
 this._native.setAttribute("id","workspace");
-this._native.setAttribute("preserveAspectRatio","true")
+this._native.setAttribute("preserveAspectRatio","none")
 },setCoordSize:function(width,height){var viewBox=this._native.getAttribute("viewBox");
 var coords=[0,0,0,0];
 if(viewBox!=null){coords=viewBox.split(/ /)
@@ -375,7 +397,7 @@ if(viewBox!=null){coords=viewBox.split(/ /)
 }if($defined(x)){coords[0]=x
 }if($defined(y)){coords[1]=y
 }this._native.setAttribute("viewBox",coords.join(" "))
-},appendChild:function(child){this.parent(child);
+},append:function(child){this.parent(child);
 web2d.peer.utils.EventUtils.broadcastChangeEvent(child,"onChangeCoordSize")
 },getCoordOrigin:function(child){var viewBox=this._native.getAttribute("viewBox");
 var coords=[1,1,1,1];
@@ -401,6 +423,10 @@ if(change){this.updateTransform()
 var sy=this._size.height/this._coordSize.height;
 var cx=this._position.x-this._coordOrigin.x*sx;
 var cy=this._position.y-this._coordOrigin.y*sy;
+cx=isNaN(cx)?0:cx;
+cy=isNaN(cy)?0:cy;
+sx=isNaN(sx)?0:sx;
+sy=isNaN(sy)?0:sy;
 this._native.setAttribute("transform","translate("+cx+","+cy+") scale("+sx+","+sy+")")
 },setOpacity:function(value){this._native.setAttribute("opacity",value)
 },setCoordOrigin:function(x,y){var change=x!=this._coordOrigin.x||y!=this._coordOrigin.y;
@@ -415,7 +441,7 @@ if($defined(x)){this._position.x=parseInt(x)
 }if($defined(y)){this._position.y=parseInt(y)
 }if(change){this.updateTransform()
 }},getPosition:function(){return{x:this._position.x,y:this._position.y}
-},appendChild:function(child){this.parent(child);
+},append:function(child){this.parent(child);
 web2d.peer.utils.EventUtils.broadcastChangeEvent(child,"onChangeCoordSize")
 },getCoordOrigin:function(){return{x:this._coordOrigin.x,y:this._coordOrigin.y}
 }});web2d.peer.svg.RectPeer=new Class({Extends:web2d.peer.svg.ElementPeer,initialize:function(arc){var svgElement=window.document.createElementNS(this.svgNamespace,"rect");
@@ -486,15 +512,15 @@ if(!$defined(func)){throw new Error("Could not find function: "+key)
 }func.apply(this,batchExecute[key])
 }},setSize:function(width,height){this._peer.setSize(width,height)
 },setPosition:function(cx,cy){this._peer.setPosition(cx,cy)
-},positionRelativeTo:function(elem,options){this._peer.positionRelativeTo(elem,options)
 },addEvent:function(type,listener){this._peer.addEvent(type,listener)
-},fireEvent:function(type,event){this._peer.fireEvent(type,event)
+},trigger:function(type,event){this._peer.trigger(type,event)
 },cloneEvents:function(from){this._peer.cloneEvents(from)
 },removeEvent:function(type,listener){this._peer.removeEvent(type,listener)
 },getType:function(){throw new Error("Not implemeneted yet. This method must be implemented by all the inherited objects.")
 },getFill:function(){return this._peer.getFill()
 },setFill:function(color,opacity){this._peer.setFill(color,opacity)
 },getPosition:function(){return this._peer.getPosition()
+},getNativePosition:function(){return this._peer.getNativePosition()
 },setStroke:function(width,style,color,opacity){if(style!=null&&style!=undefined&&style!="dash"&&style!="dot"&&style!="solid"&&style!="longdash"&&style!="dashdot"){throw new Error("Unsupported stroke style: '"+style+"'")
 }this._peer.setStroke(width,style,color,opacity)
 },_attributeNameToFuncName:function(attributeKey,prefix){var signature=web2d.Element._propertyNameToSignature[attributeKey];
@@ -572,12 +598,12 @@ for(var key in attributes){defaultAttributes[key]=attributes[key]
 }var elementType=element.getType();
 if(elementType==null){throw"It seems not to be an element ->"+element
 }this._peer.removeChild(element._peer)
-},appendChild:function(element){if(!$defined(element)){throw"Child element can not be null"
+},append:function(element){if(!$defined(element)){throw"Child element can not be null"
 }if(element==this){throw"It's not posible to add the group as a child of itself"
 }var elementType=element.getType();
 if(elementType==null){throw"It seems not to be an element ->"+element
 }if(elementType=="Workspace"){throw"A group can not have a workspace as a child"
-}this._peer.appendChild(element._peer)
+}this._peer.append(element._peer)
 },getType:function(){return"Group"
 },setCoordSize:function(width,height){this._peer.setCoordSize(width,height)
 },setCoordOrigin:function(x,y){this._peer.setCoordOrigin(x,y)
@@ -588,7 +614,7 @@ if(elementType==null){throw"It seems not to be an element ->"+element
 },getCoordSize:function(){return this._peer.getCoordSize()
 },appendDomChild:function(DomElement){if(!$defined(DomElement)){throw"Child element can not be null"
 }if(DomElement==this){throw"It's not possible to add the group as a child of itself"
-}this._peer._native.appendChild(DomElement)
+}this._peer._native.append(DomElement)
 },setOpacity:function(value){this._peer.setOpacity(value)
 }});web2d.Image=new Class({Extends:web2d.Element,initialize:function(attributes){var peer=web2d.peer.Toolkit.createImage();
 this.parent(peer,attributes)
@@ -719,39 +745,39 @@ var peer=web2d.peer.Toolkit.createWorkspace(this._htmlContainer);
 var defaultAttributes={width:"200px",height:"200px",stroke:"1px solid #edf1be",fillColor:"white",coordOrigin:"0 0",coordSize:"200 200"};
 for(var key in attributes){defaultAttributes[key]=attributes[key]
 }this.parent(peer,defaultAttributes);
-this._htmlContainer.appendChild(this._peer._native)
+this._htmlContainer.append(this._peer._native)
 },getType:function(){return"Workspace"
-},appendChild:function(element){if(!$defined(element)){throw"Child element can not be null"
+},append:function(element){if(!$defined(element)){throw"Child element can not be null"
 }var elementType=element.getType();
 if(elementType==null){throw"It seems not to be an element ->"+element
 }if(elementType=="Workspace"){throw"A workspace can not have a workspace as a child"
-}this._peer.appendChild(element._peer)
+}this._peer.append(element._peer)
 },addItAsChildTo:function(element){if(!$defined(element)){throw"Workspace div container can not be null"
-}element.appendChild(this._htmlContainer)
-},_createDivContainer:function(domElement){var container=window.document.createElement("div");
+}element.append(this._htmlContainer)
+},_createDivContainer:function(){var container=window.document.createElement("div");
 container.id="workspaceContainer";
 container.style.position="relative";
 container.style.top="0px";
 container.style.left="0px";
 container.style.height="688px";
 container.style.border="1px solid red";
-return container
-},setSize:function(width,height){if($defined(width)){this._htmlContainer.style.width=width
-}if($defined(height)){this._htmlContainer.style.height=height
+return $(container)
+},setSize:function(width,height){if($defined(width)){this._htmlContainer.css("width",width)
+}if($defined(height)){this._htmlContainer.css("height",height)
 }this._peer.setSize(width,height)
 },setCoordSize:function(width,height){this._peer.setCoordSize(width,height)
 },setCoordOrigin:function(x,y){this._peer.setCoordOrigin(x,y)
 },getCoordOrigin:function(){return this._peer.getCoordOrigin()
 },_getHtmlContainer:function(){return this._htmlContainer
-},setFill:function(color,opacity){this._htmlContainer.style.backgroundColor=color;
+},setFill:function(color,opacity){this._htmlContainer.css("background-color",color);
 if(opacity||opacity===0){throw"Unsupported operation. Opacity not supported."
-}},getFill:function(){var color=this._htmlContainer.style.backgroundColor;
+}},getFill:function(){var color=this._htmlContainer.css("background-color");
 return{color:color}
-},getSize:function(){var width=this._htmlContainer.style.width;
-var height=this._htmlContainer.style.height;
+},getSize:function(){var width=this._htmlContainer.css("width");
+var height=this._htmlContainer.css("height");
 return{width:width,height:height}
 },setStroke:function(width,style,color,opacity){if(style!="solid"){throw"Not supported style stroke style:"+style
-}this._htmlContainer.style.border=width+" "+style+" "+color;
+}this._htmlContainer.css("border",width+" "+style+" "+color);
 if(opacity||opacity===0){throw"Unsupported operation. Opacity not supported."
 }},getCoordSize:function(){return this._peer.getCoordSize()
 },removeChild:function(element){if(!$defined(element)){throw"Child element can not be null"
@@ -780,7 +806,7 @@ $msg=function(a){if(!mindplot.Messages.__bundle){mindplot.Messages.init("en")
 }var b=mindplot.Messages.__bundle[a];
 return b?b:a
 };
-mindplot.Messages.BUNDLES={};mindplot.TopicEventDispatcher=new Class({Extends:Events,Static:{_instance:null,configure:function(a){this._instance=new mindplot.TopicEventDispatcher(a)
+mindplot.Messages.BUNDLES={};mindplot.TopicEventDispatcher=new Class({Extends:mindplot.Events,Static:{_instance:null,configure:function(a){this._instance=new mindplot.TopicEventDispatcher(a)
 },getInstance:function(){return this._instance
 }},initialize:function(a){this._readOnly=a;
 this._activeEditor=null;
@@ -809,7 +835,7 @@ mindplot.TopicEvent={EDIT:"editnode",CLICK:"clicknode"};mindplot.model.IMindmap=
 },removeBranch:function(a){throw"Unsupported operation"
 },getRelationships:function(){throw"Unsupported operation"
 },connect:function(a,b){$assert(!b.getParent(),"Child model seems to be already connected");
-a.appendChild(b);
+a.append(b);
 this.removeBranch(b)
 },disconnect:function(b){var a=b.getParent();
 $assert(b,"Child can not be null.");
@@ -840,7 +866,7 @@ d.setVersion(a);
 var e=this.getDescription();
 d.setDescription(e);
 var b=c.getBranches();
-b.each(function(f){var g=d.createNode(f.getType(),f.getId());
+_.each(b,function(f){var g=d.createNode(f.getType(),f.getId());
 f.copyTo(g);
 d.addBranch(g)
 })
@@ -944,20 +970,20 @@ return $defined(a)?a:false
 },setChildrenShrunken:function(a){this.putProperty("shrunken",a)
 },isNodeModel:function(){return true
 },isConnected:function(){return this.getParent()!=null
-},appendChild:function(a){throw"Unsupported operation"
+},append:function(a){throw"Unsupported operation"
 },connectTo:function(b){$assert(b,"parent can not be null");
 var a=this.getMindmap();
 a.connect(b,this)
 },copyTo:function(e){var d=this;
 var c=d.getPropertiesKeys();
-c.each(function(f){var g=d.getProperty(f);
+_.each(c,function(f){var g=d.getProperty(f);
 e.putProperty(f,g)
 });
 var b=this.getChildren();
 var a=e.getMindmap();
-b.each(function(f){var g=a.createNode(f.getType(),f.getId());
-f.copyTo(g);
-e.appendChild(g)
+_.each(function(g,f){var h=a.createNode(f.getType(),f.getId());
+f.copyTo(h);
+e.append(h)
 });
 return e
 },deleteNode:function(){var a=this.getMindmap();
@@ -973,13 +999,13 @@ if($defined(b)){b.removeChild(this)
 },inspect:function(){var a="{ type: "+this.getType()+" , id: "+this.getId()+" , text: "+this.getText();
 var b=this.getChildren();
 if(b.length>0){a=a+", children: {(size:"+b.length;
-b.each(function(d){a=a+"=> (";
+_.each(b,function(d){a=a+"=> (";
 var c=d.getPropertiesKeys();
-c.each(function(e){var f=d.getProperty(e);
+_.each(c,function(e){var f=d.getProperty(e);
 a=a+e+":"+f+","
 });
 a=a+"}"
-}.bind(this))
+})
 }a=a+" }";
 return a
 },removeChild:function(a){throw"Unsupported operation"
@@ -1043,7 +1069,7 @@ a._properties=Object.clone(this._properties);
 a.setId(b);
 a._feature=this._feature.clone();
 return a
-},appendChild:function(a){$assert(a&&a.isNodeModel(),"Only NodeModel can be appended to Mindmap object");
+},append:function(a){$assert(a&&a.isNodeModel(),"Only NodeModel can be appended to Mindmap object");
 this._children.push(a);
 a._parent=this
 },removeChild:function(a){$assert(a&&a.isNodeModel(),"Only NodeModel can be appended to Mindmap object.");
@@ -1107,7 +1133,7 @@ a._endArrow=this._endArrow;
 a._startArrow=this._startArrow;
 return a
 },inspect:function(){return"(fromNode:"+this.getFromNode().getId()+" , toNode: "+this.getToNode().getId()+")"
-}});mindplot.ActionDispatcher=new Class({Implements:[Events],initialize:function(a){$assert(a,"commandContext can not be null")
+}});mindplot.ActionDispatcher=new Class({Implements:[mindplot.Events],initialize:function(a){$assert(a,"commandContext can not be null")
 },addRelationship:function(b,a){throw"method must be implemented."
 },addTopics:function(b,a){throw"method must be implemented."
 },deleteEntities:function(a,b){throw"method must be implemented."
@@ -1253,9 +1279,9 @@ if(a.length!=b.length){var c=d.map(function(e){return e.getId()
 });
 $assert(a.length==b.length,"Could not find topic. Result:"+a+", Filter Criteria:"+b+", Current Topics: ["+c+"]")
 }return a
-},deleteTopic:function(a){this._designer._removeTopic(a)
+},deleteTopic:function(a){this._designer.removeTopic(a)
 },createTopic:function(a){$assert(a,"model can not be null");
-return this._designer._nodeModelToNodeGraph(a)
+return this._designer.nodeModelToNodeGraph(a)
 },createModel:function(){var a=this._designer.getMindmap();
 return a.createNode(mindplot.NodeModel.MAIN_TOPIC_TYPE)
 },addTopic:function(b){var a=this._designer.getMindmap();
@@ -1263,8 +1289,8 @@ return a.addBranch(b.getModel())
 },connect:function(b,a){b.connectTo(a,this._designer._workspace)
 },disconnect:function(a){a.disconnect(this._designer._workspace)
 },addRelationship:function(a){$assert(a,"model cannot be null");
-return this._designer._addRelationship(a)
-},deleteRelationship:function(a){this._designer._deleteRelationship(a)
+return this._designer.addRelationship(a)
+},deleteRelationship:function(a){this._designer.deleteRelationship(a)
 },findRelationships:function(b){$assert($defined(b),"relId can not be null");
 if(!(b instanceof Array)){b=[b]
 }var a=this._designer.getModel().getRelationships();
@@ -1273,7 +1299,7 @@ return a.filter(function(c){return b.contains(c.getId())
 },moveTopic:function(b,a){$assert(b,"topic cannot be null");
 $assert(a,"position cannot be null");
 mindplot.EventBus.instance.fireEvent(mindplot.EventBus.events.NodeMoveEvent,{node:b.getModel(),position:a})
-}});mindplot.DesignerModel=new Class({Implements:[Events],initialize:function(a){this._zoom=a.zoom;
+}});mindplot.DesignerModel=new Class({Implements:[mindplot.Events],initialize:function(a){this._zoom=a.zoom;
 this._topics=[];
 this._relationships=[]
 },getZoom:function(){return this._zoom
@@ -1323,16 +1349,18 @@ c++){var b=this._topics[c];
 if(b.getId()==d){a=b;
 break
 }}return a
-}});mindplot.Designer=new Class({Extends:Events,initialize:function(b,a){$assert(b,"options must be defined");
+}});mindplot.Designer=new Class({Extends:mindplot.Events,initialize:function(b,a){$assert(b,"options must be defined");
 $assert(b.zoom,"zoom must be defined");
+$assert(b.size,"size must be defined");
 $assert(a,"divElement must be defined");
 mindplot.Messages.init(b.locale);
 this._options=b;
-a.setStyles(b.size);
+a.css(b.size);
 var c=new mindplot.CommandContext(this);
 this._actionDispatcher=new mindplot.StandaloneActionDispatcher(c);
-this._actionDispatcher.addEvent("modelUpdate",function(e){this.fireEvent("modelUpdate",e)
-}.bind(this));
+var e=this;
+this._actionDispatcher.addEvent("modelUpdate",function(f){e.fireEvent("modelUpdate",f)
+});
 mindplot.ActionDispatcher.setInstance(this._actionDispatcher);
 this._model=new mindplot.DesignerModel(b);
 var d=new mindplot.ScreenManager(a);
@@ -1346,36 +1374,32 @@ this._relPivot=new mindplot.RelationshipPivot(this._workspace,this);
 this.setViewPort(b.viewPort);
 mindplot.TopicEventDispatcher.configure(this.isReadOnly());
 this._clipboard=[]
-},deactivateKeyboard:function(){mindplot.DesignerKeyboard.getInstance().deactivate();
-this.deselectAll()
-},_registerWheelEvents:function(){var a=this._workspace;
-var b=a.getScreenManager();
-$(document).addEvent("mousewheel",function(c){var d=b.getContainer().getCoordinates();
-var e=c.client.y<d.top||c.client.y>d.bottom||c.client.x<d.left||c.client.x>d.right;
-if(!e){if(c.wheel>0){this.zoomIn(1.05)
-}else{this.zoomOut(1.05)
+},_registerWheelEvents:function(){var b=1.006;
+var a=this;
+$(document).on("mousewheel",function(c){if(c.deltaY>0){a.zoomIn(b)
+}else{a.zoomOut(b)
 }c.preventDefault()
-}}.bind(this))
-},activateKeyboard:function(){mindplot.DesignerKeyboard.getInstance().activate()
+})
 },addEvent:function(b,c){if(b==mindplot.TopicEvent.EDIT||b==mindplot.TopicEvent.CLICK){var a=mindplot.TopicEventDispatcher.getInstance();
 a.addEvent(b,c)
 }else{this.parent(b,c)
 }},_registerMouseEvents:function(){var b=this._workspace;
-var c=b.getScreenManager();
-c.addEvent("update",function(){var d=this.getModel().getTopics();
-d.each(function(e){e.closeEditors()
+var d=b.getScreenManager();
+var c=this;
+d.addEvent("update",function(){var e=c.getModel().getTopics();
+_.each(e,function(f){f.closeEditors()
 });
-if(this._cleanScreen){this._cleanScreen()
+if(c._cleanScreen){c._cleanScreen()
+}});
+d.addEvent("click",function(e){c.onObjectFocusEvent(null,e)
+});
+d.addEvent("dblclick",function(g){if(b.isWorkspaceEventsEnabled()){var e=d.getWorkspaceMousePosition(g);
+var h=c.getModel().getCentralTopic();
+var f=c._createChildModel(h,e);
+this._actionDispatcher.addTopics([f],[h.getId()])
 }}.bind(this));
-c.addEvent("click",function(d){this.onObjectFocusEvent(null,d)
-}.bind(this));
-c.addEvent("dblclick",function(f){if(b.isWorkspaceEventsEnabled()){var d=c.getWorkspaceMousePosition(f);
-var g=this.getModel().getCentralTopic();
-var e=this._createChildModel(g,d);
-this._actionDispatcher.addTopics([e],[g.getId()])
-}}.bind(this));
-function a(d){d.stopPropagation();
-d.preventDefault()
+function a(e){e.stopPropagation();
+e.preventDefault()
 }},_buildDragManager:function(c){var b=this.getModel();
 var a=new mindplot.DragConnector(b,this._workspace);
 var d=new mindplot.DragManager(c,this._eventBussDispatcher);
@@ -1397,45 +1421,46 @@ return d
 },setViewPort:function(b){this._workspace.setViewPort(b);
 var a=this.getModel();
 this._workspace.setZoom(a.getZoom(),true)
-},_buildNodeGraph:function(e,h){var f=mindplot.NodeGraph.create(e,{readOnly:h});
+},_buildNodeGraph:function(e,j){var f=mindplot.NodeGraph.create(e,{readOnly:j});
 this.getModel().addTopic(f);
-if(!h){f.addEvent("mousedown",function(i){this.onObjectFocusEvent(f,i)
-}.bind(this));
+var h=this;
+if(!j){f.addEvent("mousedown",function(i){h.onObjectFocusEvent(f,i)
+});
 if(f.getType()!=mindplot.model.INodeModel.CENTRAL_TOPIC_TYPE){this._dragManager.add(f)
-}}var c=e.isConnected();
-if(c){var g=e.getParent();
+}}var d=e.isConnected();
+if(d){var g=e.getParent();
 var b=null;
 var a=this.getModel().getTopics();
-for(var d=0;
-d<a.length;
-d++){var j=a[d];
-if(j.getModel()==g){b=j;
+for(var c=0;
+c<a.length;
+c++){var k=a[c];
+if(k.getModel()==g){b=k;
 e.disconnect();
 break
 }}$assert(b,"Could not find a topic to connect");
 f.connectTo(b,this._workspace)
-}f.addEvent("ontblur",function(){var k=this.getModel().filterSelectedTopics();
-var i=this.getModel().filterSelectedRelationships();
-if(k.length==0||i.length==0){this.fireEvent("onblur")
-}}.bind(this));
-f.addEvent("ontfocus",function(){var k=this.getModel().filterSelectedTopics();
-var i=this.getModel().filterSelectedRelationships();
-if(k.length==1||i.length==1){this.fireEvent("onfocus")
-}}.bind(this));
+}f.addEvent("ontblur",function(){var l=h.getModel().filterSelectedTopics();
+var i=h.getModel().filterSelectedRelationships();
+if(l.length==0||i.length==0){h.fireEvent("onblur")
+}});
+f.addEvent("ontfocus",function(){var l=h.getModel().filterSelectedTopics();
+var i=h.getModel().filterSelectedRelationships();
+if(l.length==1||i.length==1){h.fireEvent("onfocus")
+}});
 return f
 },onObjectFocusEvent:function(a,c){var e=this.getModel().getTopics();
-e.each(function(f){f.closeEditors()
+_.each(e,function(f){f.closeEditors()
 });
 var b=this.getModel();
 var d=b.getEntities();
-d.each(function(f){if(!$defined(c)||(!c.control&&!c.meta)){if(f.isOnFocus()&&f!=a){f.setOnFocus(false)
+_.each(d,function(f){if(!$defined(c)||(!c.ctrlKey&&!c.metaKey)){if(f.isOnFocus()&&f!=a){f.setOnFocus(false)
 }}})
 },selectAll:function(){var a=this.getModel();
 var b=a.getEntities();
-b.each(function(c){c.setOnFocus(true)
+_.each(b,function(c){c.setOnFocus(true)
 })
 },deselectAll:function(){var a=this.getModel().getEntities();
-a.each(function(b){b.setOnFocus(false)
+_.each(a,function(b){b.setOnFocus(false)
 })
 },setZoom:function(a){if(a>1.9||a<0.3){$notify($msg("ZOOM_IN_ERROR"));
 return
@@ -1483,8 +1508,8 @@ return
 var a=c.getId();
 var d=this._createChildModel(c);
 this._actionDispatcher.addTopics([d],[a])
-},_copyNodeProps:function(d,a){if(d.getType()!=mindplot.model.INodeModel.CENTRAL_TOPIC_TYPE){var i=d.getFontSize();
-if(i){a.setFontSize(i)
+},_copyNodeProps:function(d,a){if(d.getType()!=mindplot.model.INodeModel.CENTRAL_TOPIC_TYPE){var j=d.getFontSize();
+if(j){a.setFontSize(j)
 }}var g=d.getFontFamily();
 if(g){a.setFontFamily(g)
 }var f=d.getFontColor();
@@ -1497,6 +1522,8 @@ if(c){a.setFontStyle(c)
 if(e){a.setShapeType(e)
 }var b=d.getBorderColor();
 if(b){a.setBorderColor(b)
+}var i=d.getBackgroundColor();
+if(i){a.setBackgroundColor(i)
 }},_createChildModel:function(g,c){var f=g.getModel();
 var e=f.getMindmap();
 var h=e.createNode();
@@ -1541,22 +1568,24 @@ return
 }var a=this._workspace.getScreenManager();
 var d=a.getWorkspaceMousePosition(c);
 this._relPivot.start(b[0],d)
-},getMindmapProperties:function(){return{zoom:this.getModel().getZoom()}
+},getMindmapProperties:function(){var a=this.getModel();
+return{zoom:a.getZoom()}
 },loadMap:function(b){$assert(b,"mindmapModel can not be null");
 this._mindmap=b;
-var l={width:25,height:25};
-var d=new mindplot.layout.LayoutManager(b.getCentralTopic().getId(),l);
-d.addEvent("change",function(j){var m=j.getId();
-var i=this.getModel().findTopicById(m);
+var m={width:25,height:25};
+var d=new mindplot.layout.LayoutManager(b.getCentralTopic().getId(),m);
+var k=this;
+d.addEvent("change",function(j){var n=j.getId();
+var i=k.getModel().findTopicById(n);
 i.setPosition(j.getPosition());
 i.setOrder(j.getOrder())
-}.bind(this));
+});
 this._eventBussDispatcher.setLayoutManager(d);
-var k=b.getBranches();
+var l=b.getBranches();
 for(var f=0;
-f<k.length;
-f++){var c=k[f];
-var h=this._nodeModelToNodeGraph(c);
+f<l.length;
+f++){var c=l[f];
+var h=this.nodeModelToNodeGraph(c);
 h.setBranchVisibility(true)
 }var g=b.getRelationships();
 for(var e=0;
@@ -1570,17 +1599,17 @@ this.fireEvent("loadSuccess")
 },undo:function(){this._actionDispatcher._actionRunner.undo()
 },redo:function(){this._actionDispatcher._actionRunner.redo()
 },isReadOnly:function(){return this._options.readOnly
-},_nodeModelToNodeGraph:function(e){$assert(e,"Node model can not be null");
+},nodeModelToNodeGraph:function(e){$assert(e,"Node model can not be null");
 var c=e.getChildren().slice();
 c=c.sort(function(g,f){return g.getOrder()-f.getOrder()
 });
 var a=this._buildNodeGraph(e,this.isReadOnly());
 a.setVisibility(false);
-this._workspace.appendChild(a);
+this._workspace.append(a);
 for(var b=0;
 b<c.length;
 b++){var d=c[b];
-if($defined(d)){this._nodeModelToNodeGraph(d)
+if($defined(d)){this.nodeModelToNodeGraph(d)
 }}return a
 },_relationshipModelToRelationship:function(d){$assert(d,"Node model can not be null");
 var b=this._buildRelationshipShape(d);
@@ -1589,12 +1618,12 @@ a.addRelationship(b);
 var c=b.getTargetTopic();
 c.addRelationship(b);
 b.setVisibility(a.isVisible()&&c.isVisible());
-this._workspace.appendChild(b);
+this._workspace.append(b);
 return b
-},_addRelationship:function(b){var a=this.getMindmap();
+},addRelationship:function(b){var a=this.getMindmap();
 a.addRelationship(b);
 return this._relationshipModelToRelationship(b)
-},_deleteRelationship:function(b){var a=b.getSourceTopic();
+},deleteRelationship:function(b){var a=b.getSourceTopic();
 a.deleteRelationship(b);
 var d=b.getTargetTopic();
 d.deleteRelationship(b);
@@ -1607,22 +1636,23 @@ var f=d.getFromNode();
 var b=g.findTopicById(f);
 var e=d.getToNode();
 var c=g.findTopicById(e);
-$assert(c,"targetTopic could not be found:"+e+g.getTopics().map(function(h){return h.getId()
+$assert(c,"targetTopic could not be found:"+e+g.getTopics().map(function(i){return i.getId()
 }));
 var a=new mindplot.Relationship(b,c,d);
-a.addEvent("ontblur",function(){var i=this.getModel().filterSelectedTopics();
-var h=this.getModel().filterSelectedRelationships();
-if(i.length==0||h.length==0){this.fireEvent("onblur")
-}}.bind(this));
-a.addEvent("ontfocus",function(){var i=this.getModel().filterSelectedTopics();
-var h=this.getModel().filterSelectedRelationships();
-if(i.length==1||h.length==1){this.fireEvent("onfocus")
-}}.bind(this));
+var h=this;
+a.addEvent("ontblur",function(){var j=h.getModel().filterSelectedTopics();
+var i=h.getModel().filterSelectedRelationships();
+if(j.length==0||i.length==0){h.fireEvent("onblur")
+}});
+a.addEvent("ontfocus",function(){var j=h.getModel().filterSelectedTopics();
+var i=h.getModel().filterSelectedRelationships();
+if(j.length==1||i.length==1){h.fireEvent("onfocus")
+}});
 g.addRelationship(a);
 return a
-},_removeTopic:function(c){if(!c.isCentralTopic()){var b=c._parent;
+},removeTopic:function(c){if(!c.isCentralTopic()){var b=c._parent;
 c.disconnect(this._workspace);
-while(c.getChildren().length>0){this._removeTopic(c.getChildren()[0])
+while(c.getChildren().length>0){this.removeTopic(c.getChildren()[0])
 }this._workspace.removeChild(c);
 this.getModel().removeTopic(c);
 var a=c.getModel();
@@ -1675,10 +1705,12 @@ if(a.length>0){this._actionDispatcher.changeFontWeightToTopic(a)
 if(b.length>0){this._actionDispatcher.addFeatureToTopic(b[0],mindplot.TopicFeature.Icon.id,{id:a})
 }},addLink:function(){var b=this.getModel();
 var a=b.selectedTopic();
-if(a){a.showLinkEditor()
+if(a){a.showLinkEditor();
+this.onObjectFocusEvent()
 }},addNote:function(){var b=this.getModel();
 var a=b.selectedTopic();
-if(a){a.showNoteEditor()
+if(a){a.showNoteEditor();
+this.onObjectFocusEvent()
 }},goToNode:function(a){a.setOnFocus(true);
 this.onObjectFocusEvent(a)
 },getWorkSpace:function(){return this._workspace
@@ -1686,20 +1718,20 @@ this.onObjectFocusEvent(a)
 this._divContainer=a;
 this._padding={x:0,y:0};
 this._clickEvents=[];
-this._divContainer.addEvent("click",function(b){b.stopPropagation()
-}.bind(this));
-this._divContainer.addEvent("dblclick",function(b){b.stopPropagation();
+this._divContainer.bind("click",function(b){b.stopPropagation()
+});
+this._divContainer.bind("dblclick",function(b){b.stopPropagation();
 b.preventDefault()
 })
 },setScale:function(a){$assert(a,"Screen scale can not be null");
 this._scale=a
 },addEvent:function(a,b){if(a=="click"){this._clickEvents.push(b)
-}else{this._divContainer.addEvent(a,b)
+}else{this._divContainer.bind(a,b)
 }},removeEvent:function(a,b){if(a=="click"){this._clickEvents.remove(b)
-}else{this._divContainer.removeEvent(a,b)
-}},fireEvent:function(a,b){if(a=="click"){this._clickEvents.each(function(c){c(a,b)
+}else{this._divContainer.unbind(a,b)
+}},fireEvent:function(a,b){if(a=="click"){_.each(this._clickEvents,function(c){c(a,b)
 })
-}else{this._divContainer.fireEvent(a,b)
+}else{this._divContainer.trigger(a,b)
 }},_getElementPosition:function(c){var b=c.getPosition();
 var a=b.x;
 var d=b.y;
@@ -1726,16 +1758,13 @@ var h=f.getTopic();
 var g=this._getElementPosition(h);
 g.x=g.x-(parseInt(h.getSize().width)/2);
 return{x:m+g.x,y:l+g.y}
-},getWorkspaceMousePosition:function(c){var b=c.client.x;
-var d=c.client.y;
-var a=this.getContainer().getPosition();
-b=b-a.x;
-d=d-a.y;
-b=b*this._scale;
-d=d*this._scale;
-b=b+this._padding.x;
-d=d+this._padding.y;
-return new core.Point(b,d)
+},getWorkspaceMousePosition:function(b){var a=b.clientX;
+var c=b.clientY;
+a=a*this._scale;
+c=c*this._scale;
+a=a+this._padding.x;
+c=c+this._padding.y;
+return new core.Point(a,c)
 },getContainer:function(){return this._divContainer
 },setOffset:function(a,b){this._padding.x=a;
 this._padding.y=b
@@ -1744,8 +1773,8 @@ $assert(c,"zoom container can not be null");
 this._zoom=c;
 this._screenManager=d;
 var b=d.getContainer();
-this._screenWidth=parseInt(b.getStyle("width"));
-this._screenHeight=parseInt(b.getStyle("height"));
+this._screenWidth=parseInt(b.css("width"));
+this._screenHeight=parseInt(b.css("height"));
 var a=this._createWorkspace();
 this._workspace=a;
 a.addItAsChildTo(b);
@@ -1757,8 +1786,8 @@ var b=-(this._screenHeight/2);
 var a={width:this._screenWidth+"px",height:this._screenHeight+"px",coordSizeWidth:this._screenWidth,coordSizeHeight:this._screenHeight,coordOriginX:c,coordOriginY:b,fillColor:"transparent",strokeWidth:0};
 web2d.peer.Toolkit.init();
 return new web2d.Workspace(a)
-},appendChild:function(a){if($defined(a.addToWorkspace)){a.addToWorkspace(this)
-}else{this._workspace.appendChild(a)
+},append:function(a){if($defined(a.addToWorkspace)){a.addToWorkspace(this)
+}else{this._workspace.append(a)
 }},removeChild:function(a){if($defined(a.removeFromWorkspace)){a.removeFromWorkspace(this)
 }else{this._workspace.removeChild(a)
 }},addEvent:function(a,b){this._workspace.addEvent(a,b)
@@ -1808,7 +1837,7 @@ if(Browser.firefox){window.document.body.style.cursor="-moz-grabbing"
 }l.preventDefault();
 d.fireEvent("update");
 h=true
-}.bind(this);
+};
 d.addEvent("mousemove",b._mouseMoveListener);
 b._mouseUpListener=function(j){d.removeEvent("mousemove",b._mouseMoveListener);
 d.removeEvent("mouseup",b._mouseUpListener);
@@ -1825,27 +1854,28 @@ d.addEvent("mouseup",b._mouseUpListener)
 }};
 d.addEvent("mousedown",a)
 },setViewPort:function(a){this._viewPort=a
-}});mindplot.ShirinkConnector=new Class({initialize:function(b){var c=new web2d.Elipse(mindplot.Topic.prototype.INNER_RECT_ATTRIBUTES);
-this._ellipse=c;
-c.setFill("rgb(62,118,179)");
-c.setSize(mindplot.Topic.CONNECTOR_WIDTH,mindplot.Topic.CONNECTOR_WIDTH);
-c.addEvent("click",function(f){var d=b.getModel();
-var h=!d.areChildrenShrunken();
-var e=b.getId();
-var g=mindplot.ActionDispatcher.getInstance();
-g.shrinkBranch([e],h);
-f.stopPropagation()
+}});mindplot.ShirinkConnector=new Class({initialize:function(b){var d=new web2d.Elipse(mindplot.Topic.prototype.INNER_RECT_ATTRIBUTES);
+this._ellipse=d;
+d.setFill("rgb(62,118,179)");
+d.setSize(mindplot.Topic.CONNECTOR_WIDTH,mindplot.Topic.CONNECTOR_WIDTH);
+d.addEvent("click",function(g){var e=b.getModel();
+var i=!e.areChildrenShrunken();
+var f=b.getId();
+var h=mindplot.ActionDispatcher.getInstance();
+h.shrinkBranch([f],i);
+g.stopPropagation()
 });
-c.addEvent("mousedown",function(d){d.stopPropagation()
+d.addEvent("mousedown",function(e){e.stopPropagation()
 });
-c.addEvent("dblclick",function(d){d.stopPropagation()
+d.addEvent("dblclick",function(e){e.stopPropagation()
 });
-c.addEvent("mouseover",function(d){c.setFill("rgb(153, 0, 255)")
+d.addEvent("mouseover",function(e){d.setFill("rgb(153, 0, 255)")
 });
-c.addEvent("mouseout",function(e){var d=b.getBackgroundColor();
-this.setFill(d)
-}.bind(this));
-c.setCursor("default");
+var c=this;
+d.addEvent("mouseout",function(f){var e=b.getBackgroundColor();
+c.setFill(e)
+});
+d.setCursor("default");
 this._fillColor="#f7f7f7";
 var a=b.getModel();
 this.changeRender(a.areChildrenShrunken())
@@ -1857,156 +1887,135 @@ if(a){b.setStroke("2","solid")
 },setFill:function(a){this._fillColor=a;
 this._ellipse.setFill(a)
 },setAttribute:function(a,b){this._ellipse.setAttribute(a,b)
-},addToWorkspace:function(a){a.appendChild(this._ellipse)
+},addToWorkspace:function(a){a.append(this._ellipse)
 },setPosition:function(a,b){this._ellipse.setPosition(a,b)
 },moveToBack:function(){this._ellipse.moveToBack()
 },moveToFront:function(){this._ellipse.moveToFront()
-}});mindplot.DesignerKeyboard=new Class({Extends:Keyboard,Static:{register:function(a){this._instance=new mindplot.DesignerKeyboard(a);
-this._instance.activate()
+}});mindplot.Keyboard=new Class({initialize:function(){},addShortcut:function(a,b){if(!$.isArray(a)){a=[a]
+}_.each(a,function(c){$(document).bind("keydown",c,b)
+})
+}});mindplot.DesignerKeyboard=new Class({Extends:mindplot.Keyboard,Static:{register:function(a){this._instance=new mindplot.DesignerKeyboard(a)
 },getInstance:function(){return this._instance
 }},initialize:function(a){$assert(a,"designer can not be null");
-this.parent({defaultEventType:"keydown"});
 this._registerEvents(a)
-},_registerEvents:function(d){var b=d.getModel();
-var c={backspace:function(g){g.preventDefault();
-g.stopPropagation();
-d.deleteSelectedEntities()
-}.bind(this),space:function(){d.shrinkSelectedBranch()
-}.bind(this),f2:function(){var g=b.selectedTopic();
-if(g){g.showTextEditor()
-}}.bind(this),"delete":function(g){d.deleteSelectedEntities();
-g.preventDefault();
-g.stopPropagation()
-}.bind(this),enter:function(){d.createSiblingForSelectedNode()
-}.bind(this),insert:function(g){d.createChildForSelectedNode();
-g.preventDefault();
-g.stopPropagation()
-}.bind(this),tab:function(g){d.createChildForSelectedNode();
-g.preventDefault();
-g.stopPropagation()
-}.bind(this),"-":function(){d.createChildForSelectedNode()
-}.bind(this),"meta+enter":function(g){g.preventDefault();
-g.stopPropagation();
-d.createChildForSelectedNode()
-}.bind(this),"ctrl+z":function(g){g.preventDefault(g);
-g.stopPropagation();
-d.undo()
-}.bind(this),"meta+z":function(g){g.preventDefault();
-g.stopPropagation();
-d.undo()
-}.bind(this),"ctrl+c":function(g){g.preventDefault(g);
-g.stopPropagation();
-d.copyToClipboard()
-}.bind(this),"meta+c":function(g){g.preventDefault();
-g.stopPropagation();
-d.copyToClipboard()
-}.bind(this),"ctrl+v":function(g){g.preventDefault(g);
-g.stopPropagation();
-d.pasteClipboard()
-}.bind(this),"meta+v":function(g){g.preventDefault();
-g.stopPropagation();
-d.pasteClipboard()
-}.bind(this),"ctrl+z+shift":function(g){g.preventDefault();
-g.stopPropagation();
-d.redo()
-}.bind(this),"meta+z+shift":function(g){g.preventDefault();
-g.stopPropagation();
-d.redo()
-}.bind(this),"ctrl+y":function(g){g.preventDefault();
-g.stopPropagation();
-d.redo()
-}.bind(this),"meta+y":function(g){g.preventDefault();
-g.stopPropagation();
-d.redo()
-}.bind(this),"ctrl+a":function(g){g.preventDefault();
-g.stopPropagation();
-d.selectAll()
-},"ctrl+b":function(g){g.preventDefault();
-g.stopPropagation();
-d.changeFontWeight()
-},"meta+b":function(g){g.preventDefault();
-g.stopPropagation();
-d.changeFontWeight()
-},"ctrl+s":function(g){g.preventDefault();
-g.stopPropagation();
-$("save").fireEvent("click")
-},"meta+s":function(g){g.preventDefault();
-g.stopPropagation();
-$("save").fireEvent("click")
-},"ctrl+i":function(g){g.preventDefault();
-g.stopPropagation();
-d.changeFontStyle()
-},"meta+i":function(g){g.preventDefault();
-g.stopPropagation();
-d.changeFontStyle()
-},"meta+shift+a":function(g){g.preventDefault();
-g.stopPropagation();
-d.deselectAll()
-},"ctrl+shift+a":function(g){g.preventDefault();
-g.stopPropagation();
-d.deselectAll()
-},"meta+a":function(g){g.preventDefault();
-g.stopPropagation();
-d.selectAll()
-},"meta+=":function(g){g.preventDefault();
-g.stopPropagation();
-d.zoomIn()
-},"meta+-":function(g){g.preventDefault();
-g.stopPropagation();
-d.zoomOut()
-},"ctrl+=":function(g){g.preventDefault();
-g.stopPropagation();
-d.zoomIn()
-},"ctrl+-":function(g){g.preventDefault();
-g.stopPropagation();
-d.zoomOut()
-},right:function(h){var g=b.selectedTopic();
-if(g){if(g.isCentralTopic()){this._goToSideChild(d,g,"RIGHT")
-}else{if(g.getPosition().x<0){this._goToParent(d,g)
-}else{if(!g.areChildrenShrunken()){this._goToChild(d,g)
-}}}}else{var i=b.getCentralTopic();
-this._goToNode(d,i)
-}h.preventDefault();
-h.stopPropagation()
-}.bind(this),left:function(h){var g=b.selectedTopic();
-if(g){if(g.isCentralTopic()){this._goToSideChild(d,g,"LEFT")
-}else{if(g.getPosition().x>0){this._goToParent(d,g)
-}else{if(!g.areChildrenShrunken()){this._goToChild(d,g)
-}}}}else{var i=b.getCentralTopic();
-this._goToNode(d,i)
-}h.preventDefault();
-h.stopPropagation()
-}.bind(this),up:function(h){var g=b.selectedTopic();
-if(g){if(!g.isCentralTopic()){this._goToBrother(d,g,"UP")
-}}else{var i=b.getCentralTopic();
-this._goToNode(d,i)
-}h.preventDefault();
-h.stopPropagation()
-}.bind(this),down:function(h){var g=b.selectedTopic();
-if(g){if(!g.isCentralTopic()){this._goToBrother(d,g,"DOWN")
-}}else{var i=b.getCentralTopic();
-this._goToNode(d,i)
-}h.preventDefault();
-h.stopPropagation()
-}.bind(this)};
-this.addEvents(c);
-var e=/^(?:shift|control|ctrl|alt|meta)$/;
-var a=["shift","control","alt","meta"];
-var f=["esc","capslock","tab","f1","f3","f4","f5","f6","f7","f8","f9","f10","f11","f12","backspace","down","up","left","right","control"];
-if(!Browser.Platform.mac){f.push("alt")
-}$(document).addEvent("keydown",function(k){var j=[];
-a.each(function(n){if(k[n]){j.push(n)
+},_registerEvents:function(b){var a=b.getModel();
+this.addShortcut(["backspace"],function(e){e.preventDefault();
+e.stopPropagation();
+b.deleteSelectedEntities()
+});
+this.addShortcut(["space"],function(){b.shrinkSelectedBranch()
+});
+this.addShortcut(["f2"],function(f){f.stopPropagation();
+f.preventDefault();
+var e=a.selectedTopic();
+if(e){e.showTextEditor()
 }});
-if(!e.test(k.key)){j.push(k.key)
-}var h=j.join("+");
-var l=false;
-for(var i in c){if(i==h){l=true;
-break
-}}if(!l&&!f.contains(h)&&!f.contains(k.key)&&!k.meta&&!k.control){var g=d.getModel().filterSelectedTopics();
-if(g.length>0){var m=k.key;
-if(a.contains(k.key)){m=""
-}g[0].showTextEditor(m);
-k.stopPropagation()
+this.addShortcut(["del"],function(e){b.deleteSelectedEntities();
+e.preventDefault();
+e.stopPropagation()
+});
+this.addShortcut(["enter"],function(){b.createSiblingForSelectedNode()
+});
+this.addShortcut(["insert"],function(e){b.createChildForSelectedNode();
+e.preventDefault();
+e.stopPropagation()
+});
+this.addShortcut(["tab"],function(e){b.createChildForSelectedNode();
+e.preventDefault();
+e.stopPropagation()
+});
+this.addShortcut(["meta+enter"],function(e){e.preventDefault();
+e.stopPropagation();
+b.createChildForSelectedNode()
+});
+this.addShortcut(["ctrl+z","meta+z"],function(e){e.preventDefault(e);
+e.stopPropagation();
+b.undo()
+});
+this.addShortcut(["ctrl+c","meta+c"],function(e){e.preventDefault(e);
+e.stopPropagation();
+b.copyToClipboard()
+});
+this.addShortcut(["ctrl+v","meta+v"],function(e){e.preventDefault(e);
+e.stopPropagation();
+b.pasteClipboard()
+});
+this.addShortcut(["ctrl+shift+z","meta+shift+z","ctrl+y","meta+y"],function(e){e.preventDefault();
+e.stopPropagation();
+b.redo()
+});
+this.addShortcut(["ctrl+a","meta+a"],function(e){e.preventDefault();
+e.stopPropagation();
+b.selectAll()
+});
+this.addShortcut(["ctrl+b","meta+b"],function(e){e.preventDefault();
+e.stopPropagation();
+b.changeFontWeight()
+});
+this.addShortcut(["ctrl+s","meta+s"],function(e){e.preventDefault();
+e.stopPropagation();
+$(document).find("#save").trigger("click")
+});
+this.addShortcut(["ctrl+i","meta+i"],function(e){e.preventDefault();
+e.stopPropagation();
+b.changeFontStyle()
+});
+this.addShortcut(["ctrl+shift+a","meta+shift+a"],function(e){e.preventDefault();
+e.stopPropagation();
+b.deselectAll()
+});
+this.addShortcut(["meta+=","ctrl+="],function(e){e.preventDefault();
+e.stopPropagation();
+b.zoomIn()
+});
+this.addShortcut(["meta+-","ctrl+-"],function(e){e.preventDefault();
+e.stopPropagation();
+b.zoomOut()
+});
+var c=this;
+this.addShortcut("right",function(f){var e=a.selectedTopic();
+if(e){if(e.isCentralTopic()){c._goToSideChild(b,e,"RIGHT")
+}else{if(e.getPosition().x<0){c._goToParent(b,e)
+}else{if(!e.areChildrenShrunken()){c._goToChild(b,e)
+}}}}else{var g=a.getCentralTopic();
+c._goToNode(b,g)
+}f.preventDefault();
+f.stopPropagation()
+});
+this.addShortcut("left",function(f){var e=a.selectedTopic();
+if(e){if(e.isCentralTopic()){c._goToSideChild(b,e,"LEFT")
+}else{if(e.getPosition().x>0){c._goToParent(b,e)
+}else{if(!e.areChildrenShrunken()){c._goToChild(b,e)
+}}}}else{var g=a.getCentralTopic();
+c._goToNode(b,g)
+}f.preventDefault();
+f.stopPropagation()
+});
+this.addShortcut("up",function(f){var e=a.selectedTopic();
+if(e){if(!e.isCentralTopic()){c._goToBrother(b,e,"UP")
+}}else{var g=a.getCentralTopic();
+c._goToNode(b,g)
+}f.preventDefault();
+f.stopPropagation()
+});
+this.addShortcut("down",function(f){var e=a.selectedTopic();
+if(e){if(!e.isCentralTopic()){c._goToBrother(b,e,"DOWN")
+}}else{var g=a.getCentralTopic();
+c._goToNode(b,g)
+}f.preventDefault();
+f.stopPropagation()
+});
+var d=["esc","escape","f1","f3","f4","f5","f6","f7","f8","f9","f10","f11","f12"];
+$(document).on("keypress",function(f){var h;
+if(f.key&&d.contains(f.key.toLowerCase())){return
+}if(f.key&&f.keyCode==0){h=f.charCode
+}else{h=f.keyCode
+}var g=jQuery.hotkeys.specialKeys[h];
+if(["enter","capslock"].indexOf(g)==-1&&!jQuery.hotkeys.shiftNums[h]){var e=b.getModel().filterSelectedTopics();
+if(e.length>0){var i=String.fromCharCode(h);
+if(f.ctrlKey||f.altKey||f.metaKey){return
+}e[0].showTextEditor(i);
+f.stopPropagation()
 }}})
 },_goToBrother:function(p,c,l){var n=c.getParent();
 if(n){var e=n.getChildren();
@@ -2053,7 +2062,8 @@ f=g
 }}this._goToNode(c,f)
 }},_goToNode:function(a,b){a.deselectAll();
 b.setOnFocus(true)
-}});mindplot.TopicStyle=new Class({Static:{_getStyles:function(c){$assert(c,"topic can not be null");
+}});
+mindplot.DesignerKeyboard.specialKeys={8:"backspace",9:"tab",10:"return",13:"enter",16:"shift",17:"ctrl",18:"alt",19:"pause",20:"capslock",27:"esc",32:"space",33:"pageup",34:"pagedown",35:"end",36:"home",37:"left",38:"up",39:"right",40:"down",45:"insert",46:"del",96:"0",97:"1",98:"2",99:"3",100:"4",101:"5",102:"6",103:"7",104:"8",105:"9",106:"*",107:"+",109:"-",110:".",111:"/",112:"f1",113:"f2",114:"f3",115:"f4",116:"f5",117:"f6",118:"f7",119:"f8",120:"f9",121:"f10",122:"f11",123:"f12",144:"numlock",145:"scroll",186:";",191:"/",220:"\\",222:"'",224:"meta"};mindplot.TopicStyle=new Class({Static:{_getStyles:function(c){$assert(c,"topic can not be null");
 var a;
 if(c.isCentralTopic()){a=mindplot.TopicStyle.STYLES.CENTRAL_TOPIC
 }else{var b=c.getOutgoingConnectedTopic();
@@ -2074,7 +2084,6 @@ this._options=a;
 this._mouseEvents=true;
 this.setModel(b);
 this._onFocus=false;
-this._event=new Events();
 this._size={width:50,height:20}
 },isReadOnly:function(){return this._options.readOnly
 },getType:function(){var a=this.getModel();
@@ -2090,7 +2099,7 @@ b.addEvent(a,c)
 },removeEvent:function(a,c){var b=this.get2DElement();
 b.removeEvent(a,c)
 },fireEvent:function(a,c){var b=this.get2DElement();
-b.fireEvent(a,c)
+b.trigger(a,c)
 },setMouseEventsEnabled:function(a){this._mouseEvents=a
 },isMouseEventsEnabled:function(){return this._mouseEvents
 },getSize:function(){return this._size
@@ -2137,11 +2146,12 @@ var c=b.getPosition();
 if(c!=null&&this.isCentralTopic()){this.setPosition(c)
 }if(!this.isReadOnly()){this._registerEvents()
 }},_registerEvents:function(){this.setMouseEventsEnabled(true);
-this.addEvent("click",function(a){a.stopPropagation()
+this.addEvent("click",function(b){b.stopPropagation()
 });
-this.addEvent("dblclick",function(a){this._getTopicEventDispatcher().show(this);
-a.stopPropagation()
-}.bind(this))
+var a=this;
+this.addEvent("dblclick",function(b){a._getTopicEventDispatcher().show(a);
+b.stopPropagation()
+})
 },setShapeType:function(a){this._setShapeType(a,true)
 },getParent:function(){return this._parent
 },_setShapeType:function(g,d){var f=this.getModel();
@@ -2152,7 +2162,7 @@ var a=this.getInnerShape();
 var j=this.getSize();
 this.setSize(j,true);
 var h=this.get2DElement();
-h.appendChild(a);
+h.append(a);
 var i=this.getTextShape();
 i.moveToFront();
 var c=this.getIconGroup();
@@ -2223,7 +2233,7 @@ this._setText(a,false)
 }return this._text
 },getOrBuildIconGroup:function(){if(!$defined(this._iconsGroup)){this._iconsGroup=this._buildIconGroup();
 var a=this.get2DElement();
-a.appendChild(this._iconsGroup.getNativeElement());
+a.append(this._iconsGroup.getNativeElement());
 this._iconsGroup.moveToFront()
 }return this._iconsGroup
 },getIconGroup:function(){return this._iconsGroup
@@ -2322,7 +2332,7 @@ a.setFontColor(c)
 b.setText(d==null?mindplot.TopicStyle.defaultText(this):d);
 if($defined(c)&&c){var a=this.getModel();
 a.setText(d)
-}},setText:function(a){if(!a||a.trim().length==0){a=null
+}},setText:function(a){if(!a||$.trim(a).length==0){a=null
 }this._setText(a,true);
 this._adjustShapes()
 },getText:function(){var b=this.getModel();
@@ -2357,29 +2367,30 @@ this._set2DElement(f);
 var c=this.getOuterShape();
 var e=this.getInnerShape();
 var d=this.getTextShape();
-f.appendChild(c);
-f.appendChild(e);
-f.appendChild(d);
+f.append(c);
+f.append(e);
+f.append(d);
 var b=this.getModel();
 if(b.getFeatures().length!=0){this.getOrBuildIconGroup()
 }var a=this.getShrinkConnector();
 if($defined(a)){a.addToWorkspace(f)
 }this._registerDefaultListenersToElement(f,this)
-},_registerDefaultListenersToElement:function(c,a){var d=function(e){if(a.isMouseEventsEnabled()){a.handleMouseOver(e)
+},_registerDefaultListenersToElement:function(d,a){var e=function(f){if(a.isMouseEventsEnabled()){a.handleMouseOver(f)
 }};
-c.addEvent("mouseover",d);
-var b=function(e){if(a.isMouseEventsEnabled()){a.handleMouseOut(e)
+d.addEvent("mouseover",e);
+var c=function(f){if(a.isMouseEventsEnabled()){a.handleMouseOut(f)
 }};
-c.addEvent("mouseout",b);
-c.addEvent("mousedown",function(f){if(!this.isReadOnly()){var g=true;
-if((f.meta&&Browser.Platform.mac)||(f.control&&!Browser.Platform.mac)){g=!this.isOnFocus();
-f.stopPropagation();
-f.preventDefault()
-}a.setOnFocus(g)
-}var e=this._getTopicEventDispatcher();
-e.process(mindplot.TopicEvent.CLICK,this);
-f.stopPropagation()
-}.bind(this))
+d.addEvent("mouseout",c);
+var b=this;
+d.addEvent("mousedown",function(g){if(!b.isReadOnly()){var h=true;
+if((g.metaKey&&Browser.Platform.mac)||(g.ctrlKey&&!Browser.Platform.mac)){h=!b.isOnFocus();
+g.stopPropagation();
+g.preventDefault()
+}a.setOnFocus(h)
+}var f=b._getTopicEventDispatcher();
+f.process(mindplot.TopicEvent.CLICK,b);
+g.stopPropagation()
+})
 },areChildrenShrunken:function(){var a=this.getModel();
 return a.areChildrenShrunken()&&!this.isCentralTopic()
 },isCollapsed:function(){var a=false;
@@ -2387,17 +2398,18 @@ var b=this.getParent();
 while(b&&!a){a=b.areChildrenShrunken();
 b=b.getParent()
 }return a
-},setChildrenShrunken:function(d){var b=this.getModel();
-b.setChildrenShrunken(d);
+},setChildrenShrunken:function(e){var b=this.getModel();
+b.setChildrenShrunken(e);
 var a=this.getShrinkConnector();
-if($defined(a)){a.changeRender(d)
-}var c=this._flatten2DElements(this);
-var e=new mindplot.util.FadeEffect(c,!d);
-e.addEvent("complete",function(){if(d){this.setOnFocus(true)
-}c.forEach(function(f){if(f.setOnFocus){f.setOnFocus(false)
+if($defined(a)){a.changeRender(e)
+}var d=this._flatten2DElements(this);
+var f=new mindplot.util.FadeEffect(d,!e);
+var c=this;
+f.addEvent("complete",function(){if(e){c.setOnFocus(true)
+}d.forEach(function(g){if(g.setOnFocus){g.setOnFocus(false)
 }})
-}.bind(this));
-e.start();
+});
+f.start();
 mindplot.EventBus.instance.fireEvent(mindplot.EventBus.events.NodeShrinkEvent,b)
 },getShrinkConnector:function(){var a=this._connector;
 if(this._connector==null){this._connector=new mindplot.ShirinkConnector(this);
@@ -2500,7 +2512,7 @@ b<this._relationships.length;
 b++){this._relationships[b].moveToFront()
 }},isVisible:function(){var a=this.get2DElement();
 return a.isVisible()
-},_setRelationshipLinesVisibility:function(a){this._relationships.each(function(f){var b=f.getSourceTopic();
+},_setRelationshipLinesVisibility:function(a){_.each(this._relationships,function(f){var b=f.getSourceTopic();
 var d=f.getTargetTopic();
 var e=d.getModel().getParent();
 var c=b.getModel().getParent();
@@ -2568,7 +2580,7 @@ a.setOrder(b)
 $assert(b!=this,"Circular connection are not allowed");
 $assert(b,"Parent Graph can not be null");
 $assert(d,"Workspace can not be null");
-b.appendChild(this);
+b.append(this);
 this._parent=b;
 var c=b.getModel();
 var f=this.getModel();
@@ -2576,7 +2588,7 @@ f.connectTo(c);
 var a=new mindplot.ConnectionLine(this,b);
 a.setVisibility(false);
 this._outgoingLine=a;
-d.appendChild(a);
+d.append(a);
 this.updateTopicShape(b);
 var g=this.getModel();
 if(!g.getText()){var h=this.getText();
@@ -2588,7 +2600,7 @@ var e=b.getShrinkConnector();
 if($defined(e)){e.setVisibility(true)
 }a.redraw();
 if(this.isInWorkspace()){mindplot.EventBus.instance.fireEvent(mindplot.EventBus.events.NodeConnectEvent,{parentNode:b.getModel(),childNode:this.getModel()})
-}},appendChild:function(b){var a=this.getChildren();
+}},append:function(b){var a=this.getChildren();
 a.push(b)
 },removeChild:function(b){var a=this.getChildren();
 a.erase(b)
@@ -2603,7 +2615,7 @@ if($defined(a)){b.removeChild(a)
 }this._isInWorkspace=false;
 mindplot.EventBus.instance.fireEvent(mindplot.EventBus.events.NodeRemoved,this.getModel())
 },addToWorkspace:function(a){var b=this.get2DElement();
-a.appendChild(b);
+a.append(b);
 if(!this.isInWorkspace()){if(!this.isCentralTopic()){mindplot.EventBus.instance.fireEvent(mindplot.EventBus.events.NodeAdded,this.getModel())
 }if(this.getModel().isConnected()){mindplot.EventBus.instance.fireEvent(mindplot.EventBus.events.NodeConnectEvent,{parentNode:this.getOutgoingConnectedTopic().getModel(),childNode:this.getModel()})
 }}this._isInWorkspace=true;
@@ -2686,12 +2698,12 @@ var c=this.getBackgroundColor();
 f.setAttribute("fillColor",c);
 var e={width:100,height:100,coordSizeWidth:100,coordSizeHeight:100};
 var d=new web2d.Group(e);
-d.appendChild(f);
+d.append(f);
 if(this.getShapeType()!=mindplot.model.TopicShape.IMAGE){var b=this._buildTextShape(true);
 var g=this.getText();
 b.setText(g);
 b.setOpacity(0.5);
-d.appendChild(b)
+d.append(b)
 }return d
 },updateTopicShape:function(b,a){var c=this.getModel();
 var d=c.getShapeType();
@@ -2755,7 +2767,7 @@ if(this._order!=a.order){var f=this._getDragPivot();
 var e=a.position;
 f.connectTo(j,e);
 this.setOrder(a.order)
-}}},updateFreeLayout:function(c){var b=(c.meta&&Browser.Platform.mac)||(c.control&&!Browser.Platform.mac);
+}}},updateFreeLayout:function(c){var b=(c.metaKey&&Browser.Platform.mac)||(c.ctrlKey&&!Browser.Platform.mac);
 if(this.isFreeLayoutOn()!=b){var a=this._getDragPivot();
 a.setVisibility(!b);
 this._isFreeLayoutEnabled=b
@@ -2779,7 +2791,7 @@ var a=this._getDragPivot();
 a.setVisibility(false);
 this._isInWorkspace=false
 }},isInWorkspace:function(){return this._isInWorkspace
-},addToWorkspace:function(b){if(!this._isInWorkspace){b.appendChild(this._elem2d);
+},addToWorkspace:function(b){if(!this._isInWorkspace){b.append(this._elem2d);
 var a=this._getDragPivot();
 a.addToWorkspace(b);
 this._isInWorkspace=true
@@ -2807,7 +2819,7 @@ return a.getTargetTopic()
 mindplot.DragTopic.PIVOT_SIZE={width:50,height:6};
 mindplot.DragTopic.init=function(b){$assert(b,"workspace can not be null");
 var a=mindplot.DragTopic.__getDragPivot();
-b.appendChild(a)
+b.append(a)
 };
 mindplot.DragTopic.__getDragPivot=function(){var a=mindplot.DragTopic._dragPivot;
 if(!$defined(a)){a=new mindplot.DragPivot();
@@ -2819,19 +2831,20 @@ this._listeners={};
 this._isDragInProcess=false;
 this._eventDispatcher=a;
 mindplot.DragTopic.init(this._workspace)
-},add:function(e){var c=this._workspace;
+},add:function(f){var c=this._workspace;
 var b=c.getScreenManager();
 var d=this;
-var a=function(h){if(c.isWorkspaceEventsEnabled()){c.enableWorkspaceEvents(false);
-var f=this._eventDispatcher.getLayoutManager();
-var i=e.createDragNode(f);
-var g=d._buildMouseMoveListener(c,i,d);
-b.addEvent("mousemove",g);
-var j=d._buildMouseUpListener(c,e,i,d);
-b.addEvent("mouseup",j);
+var e=this;
+var a=function(i){if(c.isWorkspaceEventsEnabled()){c.enableWorkspaceEvents(false);
+var g=e._eventDispatcher.getLayoutManager();
+var j=f.createDragNode(g);
+var h=d._buildMouseMoveListener(c,j,d);
+b.addEvent("mousemove",h);
+var k=d._buildMouseUpListener(c,f,j,d);
+b.addEvent("mouseup",k);
 window.document.body.style.cursor="move"
-}}.bind(this);
-e.addEvent("mousedown",a)
+}};
+f.addEvent("mousedown",a)
 },remove:function(e){var a=this._topics;
 var d=false;
 var b=-1;
@@ -2839,32 +2852,34 @@ for(var c=0;
 c<a.length;
 c++){if(a[c]==e){d=true;
 b=c
-}}},_buildMouseMoveListener:function(c,e,d){var b=c.getScreenManager();
-var a=function(h){if(!this._isDragInProcess){var f=d._listeners.startdragging;
-f(h,e);
-c.appendChild(e);
-this._isDragInProcess=true
-}var i=b.getWorkspaceMousePosition(h);
-e.setPosition(i.x,i.y);
-var g=d._listeners.dragging;
-if($defined(g)){g(h,e)
-}h.preventDefault()
-}.bind(this);
+}}},_buildMouseMoveListener:function(c,f,d){var b=c.getScreenManager();
+var e=this;
+var a=function(i){if(!e._isDragInProcess){var g=d._listeners.startdragging;
+g(i,f);
+c.append(f);
+e._isDragInProcess=true
+}var j=b.getWorkspaceMousePosition(i);
+f.setPosition(j.x,j.y);
+var h=d._listeners.dragging;
+if($defined(h)){h(i,f)
+}i.preventDefault()
+};
 d._mouseMoveListener=a;
 return a
-},_buildMouseUpListener:function(c,e,f,d){var b=c.getScreenManager();
-var a=function(h){$assert(f.isDragTopic,"dragNode must be an DragTopic");
+},_buildMouseUpListener:function(c,f,g,d){var b=c.getScreenManager();
+var e=this;
+var a=function(i){$assert(g.isDragTopic,"dragNode must be an DragTopic");
 b.removeEvent("mousemove",d._mouseMoveListener);
 b.removeEvent("mouseup",d._mouseUpListener);
 d._mouseMoveListener=null;
 d._mouseUpListener=null;
 c.enableWorkspaceEvents(true);
 window.document.body.style.cursor="default";
-if(this._isDragInProcess){var g=d._listeners.enddragging;
-g(h,f);
-f.removeFromWorkspace(c);
-this._isDragInProcess=false
-}}.bind(this);
+if(e._isDragInProcess){var h=d._listeners.enddragging;
+h(i,g);
+g.removeFromWorkspace(c);
+e._isDragInProcess=false
+}};
 d._mouseUpListener=a;
 return a
 },addEvent:function(a,b){this._listeners[a]=b
@@ -2929,20 +2944,20 @@ if(b){if(b.getType()==mindplot.model.INodeModel.CENTRAL_TOPIC_TYPE){a=this._stra
 }else{a=this._curvedLine
 }}return a
 },addToWorkspace:function(c){var e=this._getPivotRect();
-c.appendChild(e);
+c.append(e);
 var a=this._connectRect;
-c.appendChild(a);
+c.append(a);
 var d=this._straightLine;
 d.setVisibility(false);
-c.appendChild(d);
+c.append(d);
 d.moveToBack();
 var f=this._curvedLine;
 f.setVisibility(false);
-c.appendChild(f);
+c.append(f);
 f.moveToBack();
 var b=this._connectRect;
 b.setVisibility(false);
-c.appendChild(b);
+c.append(b);
 b.moveToBack()
 },removeFromWorkspace:function(c){var b=this._getPivotRect();
 c.removeChild(b);
@@ -3038,7 +3053,7 @@ b.setPosition(a,f)
 }else{a=-mindplot.Topic.CONNECTOR_WIDTH
 }b.setPosition(a,f)
 }},setStroke:function(a,c,b){this._line2d.setStroke(null,null,a,b)
-},addToWorkspace:function(a){a.appendChild(this._line2d);
+},addToWorkspace:function(a){a.append(this._line2d);
 this._line2d.moveToBack()
 },removeFromWorkspace:function(a){a.removeChild(this._line2d)
 },getTargetTopic:function(){return this._targetTopic
@@ -3133,13 +3148,13 @@ if(this._endArrow){this._endArrow.setControlPoint(a[1])
 if(this._endArrow){this._endArrow.setControlPoint(this._line2d.getFrom())
 }}if(this._showEndArrow){this._endArrow.setVisibility(this.isVisible())
 }this._startArrow.setVisibility(this.isVisible()&&this._showStartArrow)
-},addToWorkspace:function(a){a.appendChild(this._focusShape);
-a.appendChild(this._controlPointsController);
+},addToWorkspace:function(a){a.append(this._focusShape);
+a.append(this._controlPointsController);
 this._controlPointControllerListener=this._initializeControlPointController.bind(this);
 this._line2d.addEvent("click",this._controlPointControllerListener);
 this._isInWorkspace=true;
-a.appendChild(this._startArrow);
-if(this._endArrow){a.appendChild(this._endArrow)
+a.append(this._startArrow);
+if(this._endArrow){a.append(this._endArrow)
 }this.parent(a);
 this._positionArrows();
 this.redraw()
@@ -3203,7 +3218,7 @@ if(this._showEndArrow){this._endArrow.setControlPoint(a)
 },setIsDestControlPointCustom:function(a){this._line2d.setIsDestControlPointCustom(a)
 },getId:function(){return this._model.getId()
 },fireEvent:function(a,c){var b=this._line2d;
-b.fireEvent(a,c)
+b.trigger(a,c)
 }});mindplot.DragConnector=new Class({initialize:function(a,b){$assert(a,"designerModel can not be null");
 $assert(b,"workspace can not be null");
 this._designerModel=a;
@@ -3213,30 +3228,31 @@ var c=this._searchConnectionCandidates(a);
 var b=a.getConnectedToTopic();
 if(b&&(c.length==0||c[0]!=b)){a.disconnect(this._workspace)
 }if(!a.isConnected()&&c.length>0){a.connectTo(c[0])
-}},_searchConnectionCandidates:function(c){var g=this._designerModel.getTopics();
+}},_searchConnectionCandidates:function(c){var h=this._designerModel.getTopics();
 var b=c.getDraggedTopic();
-var f=c.getSize?c.getSize().width:0;
-var e=c.getPosition().x>0?0:f;
-var a={x:c.getPosition().x-e,y:c.getPosition().y};
-g=g.filter(function(i){var h=b!=i;
-h=h&&i!=b;
-h=h&&!i.areChildrenShrunken()&&!i.isCollapsed();
-h=h&&!b.isChildTopic(i);
-return h
+var g=c.getSize?c.getSize().width:0;
+var f=c.getPosition().x>0?0:g;
+var a={x:c.getPosition().x-f,y:c.getPosition().y};
+h=h.filter(function(j){var i=b!=j;
+i=i&&j!=b;
+i=i&&!j.areChildrenShrunken()&&!j.isCollapsed();
+i=i&&!b.isChildTopic(j);
+return i
 });
-g=g.filter(function(j){var i=j.getPosition();
-var h=i.x+(j.getSize().width/2)*Math.sign(a.x);
-var k=(a.x-h)*Math.sign(a.x);
-return k>0&&(k<mindplot.DragConnector.MAX_VERTICAL_CONNECTION_TOLERANCE)
+h=h.filter(function(k){var j=k.getPosition();
+var i=j.x+(k.getSize().width/2)*Math.sign(a.x);
+var l=(a.x-i)*Math.sign(a.x);
+return l>0&&(l<mindplot.DragConnector.MAX_VERTICAL_CONNECTION_TOLERANCE)
 });
 var d=c.getConnectedToTopic();
-g=g.sort(function(k,i){var j=k.getPosition();
-var m=i.getPosition();
-var l=this._isVerticallyAligned(k.getSize(),j,a);
-var h=this._isVerticallyAligned(i.getSize(),m,a);
-return this._proximityWeight(l,k,a,d)-this._proximityWeight(h,i,a,d)
-}.bind(this));
-return g
+var e=this;
+h=h.sort(function(l,j){var k=l.getPosition();
+var n=j.getPosition();
+var m=e._isVerticallyAligned(l.getSize(),k,a);
+var i=e._isVerticallyAligned(j.getSize(),n,a);
+return e._proximityWeight(m,l,a,d)-e._proximityWeight(i,j,a,d)
+});
+return h
 },_proximityWeight:function(a,d,b,c){var e=d.getPosition();
 return(a?0:200)+Math.abs(e.x-b.x)+Math.abs(e.y-b.y)+(c==d?0:100)
 },_isVerticallyAligned:function(c,b,a){return Math.abs(a.y-b.y)<c.height/2
@@ -3259,24 +3275,25 @@ b.setStyle("white-space","nowrap");
 b.setStyle("nowrap","nowrap");
 b.inject(d);
 return a
-},_registerEvents:function(c){var b=this._getTextareaElem();
+},_registerEvents:function(d){var c=this._getTextareaElem();
 var a=this._getSpanElem();
-c.addEvent("keydown",function(e){switch(e.key){case"esc":this.close(false);
+var b=this;
+d.addEvent("keydown",function(f){switch(f.key){case"esc":b.close(false);
 break;
-case"enter":this.close(true);
+case"enter":b.close(true);
 break;
-default:a.innerHTML=b.value;
-var d=b.value.length+1;
-b.size=d;
-if(a.offsetWidth>(parseInt(c.style.width)-100)){c.style.width=(a.offsetWidth+100)+"px"
+default:a.innerHTML=c.value;
+var e=c.value.length+1;
+c.size=e;
+if(a.offsetWidth>(parseInt(d.style.width)-100)){d.style.width=(a.offsetWidth+100)+"px"
 }break
-}e.stopPropagation()
-}.bind(this));
-c.addEvent("click",function(d){d.stopPropagation()
+}f.stopPropagation()
 });
-c.addEvent("dblclick",function(d){d.stopPropagation()
+d.addEvent("click",function(e){e.stopPropagation()
 });
-c.addEvent("mousedown",function(d){d.stopPropagation()
+d.addEvent("dblclick",function(e){e.stopPropagation()
+});
+d.addEvent("mousedown",function(e){e.stopPropagation()
 })
 },isVisible:function(){return $defined(this._containerElem)&&this._containerElem.getStyle("display")=="block"
 },_updateModel:function(){if(this._topic.getText()!=this._getText()){var c=this._getText();
@@ -3284,7 +3301,7 @@ var a=this._topic.getId();
 var b=mindplot.ActionDispatcher.getInstance();
 b.changeTextToTopic([a],c)
 }},show:function(b){if(!this.isVisible()){var a=this._buildEditor();
-a.inject($(document.body));
+a.inject($(document.body)[0]);
 this._containerElem=a;
 this._registerEvents(a);
 this._showEditor(b)
@@ -3295,17 +3312,18 @@ var a=e.getFont();
 a.size=e.getHtmlFontSize();
 a.color=e.getColor();
 this._setStyle(a);
-var f=$defined(c)?c:b.getText();
-this._setText(f);
-var d=function(){var g=this._topic.getTextShape();
-g.positionRelativeTo(this._containerElem,{position:{x:"left",y:"top"},edge:{x:"left",y:"top"}});
-this._containerElem.setStyle("display","block");
-var h=b.getSize();
-this._setEditorSize(h.width,h.height);
-var i=this._getTextareaElem();
-i.focus();
-this._positionCursor(i,!$defined(c))
-}.bind(this);
+var g=$defined(c)?c:b.getText();
+this._setText(g);
+var f=this;
+var d=function(){var h=f._topic.getTextShape();
+f._containerElem.css("display","block");
+f._containerElem.offset(h.getNativePosition());
+var i=b.getSize();
+f._setEditorSize(i.width,i.height);
+var j=f._getTextareaElem();
+j.focus();
+f._positionCursor(j,!$defined(c))
+};
 d.delay(10)
 },_setStyle:function(c){var a=this._getTextareaElem();
 var b=this._getSpanElem();
@@ -3347,54 +3365,59 @@ a.select()
 }this._topic.getTextShape().setVisibility(true);
 this._containerElem.dispose();
 this._containerElem=null
-}}});mindplot.MultilineTextEditor=new Class({Extends:Events,initialize:function(){this._topic=null;
+}}});mindplot.MultilineTextEditor=new Class({Extends:mindplot.Events,initialize:function(){this._topic=null;
 this._timeoutId=-1
-},_buildEditor:function(){var a=new Element("div");
-a.setStyles({position:"absolute",display:"none",zIndex:"8",overflow:"hidden",border:"0 none"});
-var b=new Element("textarea",{tabindex:"-1",value:"",wrap:"off"});
-b.setStyles({border:"1px gray dashed",background:"rgba(98, 135, 167, .3)",outline:"0 none",resize:"none",overflow:"hidden"});
-b.inject(a);
+},_buildEditor:function(){var a=$("<div></div>").attr("id","textContainer").css({display:"none",zIndex:"8",overflow:"hidden",border:"0 none"});
+var b=$('<textarea tabindex="-1" value="" wrap="off" ></textarea>').css({border:"1px gray dashed",background:"rgba(98, 135, 167, .3)",outline:"0 none",resize:"none",overflow:"hidden"});
+a.append(b);
 return a
-},_registerEvents:function(a){var b=this._getTextareaElem();
-b.addEvent("keydown",function(g){switch(g.key){case"esc":this.close(false);
+},_registerEvents:function(a){var c=this._getTextareaElem();
+var b=this;
+c.on("keydown",function(i){switch(jQuery.hotkeys.specialKeys[i.keyCode]){case"esc":b.close(false);
 break;
-case"enter":if(g.meta||g.control){var h=b.value;
-var c=h.length;
-if(b.selectionStart){c=b.selectionStart
-}var f=h.substring(0,c);
-var e="";
-if(c<h.length){e=h.substring(c,h.length)
-}b.value=f+"\n"+e;
-if(b.setSelectionRange){b.focus();
-b.setSelectionRange(c+1,c+1)
-}else{if(b.createTextRange){var d=b.createTextRange();
-d.moveStart("character",c+1);
-d.select()
-}}}else{this.close(true)
-}break
-}g.stopPropagation()
-}.bind(this));
-b.addEvent("keypress",function(c){c.stopPropagation()
+case"enter":if(i.metaKey||i.ctrlKey){var j=c.val();
+var d=j.length;
+if(c.selectionStart){d=c.selectionStart
+}var h=j.substring(0,d);
+var g="";
+if(d<j.length){g=j.substring(d,j.length)
+}c.val(h+"\n"+g);
+if(c[0].setSelectionRange){c.focus();
+c[0].setSelectionRange(d+1,d+1)
+}else{if(c.createTextRange){var f=c.createTextRange();
+f.moveStart("character",d+1);
+f.select()
+}}}else{b.close(true)
+}break;
+case"tab":i.preventDefault();
+var k=$(this).get(0).selectionStart;
+var e=$(this).get(0).selectionEnd;
+$(this).val($(this).val().substring(0,k)+"\t"+$(this).val().substring(e));
+$(this).get(0).selectionStart=$(this).get(0).selectionEnd=k+1;
+break
+}i.stopPropagation()
 });
-b.addEvent("keyup",function(c){var d=this._getTextareaElem().value;
-this.fireEvent("input",[c,d]);
-this._adjustEditorSize()
-}.bind(this));
-a.addEvent("click",function(c){c.stopPropagation()
+c.on("keypress",function(d){d.stopPropagation()
 });
-a.addEvent("dblclick",function(c){c.stopPropagation()
+c.on("keyup",function(d){var e=b._getTextareaElem().val();
+b.fireEvent("input",[d,e]);
+b._adjustEditorSize()
 });
-a.addEvent("mousedown",function(c){c.stopPropagation()
+a.on("click",function(d){d.stopPropagation()
+});
+a.on("dblclick",function(d){d.stopPropagation()
+});
+a.on("mousedown",function(d){d.stopPropagation()
 })
 },_adjustEditorSize:function(){if(this.isVisible()){var c=this._getTextareaElem();
-var b=c.value.split("\n");
+var b=c.val().split("\n");
 var a=1;
-b.each(function(d){if(a<d.length){a=d.length
+_.each(b,function(d){if(a<d.length){a=d.length
 }});
-c.setAttribute("cols",a);
-c.setAttribute("rows",b.length);
-this._containerElem.setStyles({width:(a+3)+"em",height:c.getSize().height})
-}},isVisible:function(){return $defined(this._containerElem)&&this._containerElem.getStyle("display")=="block"
+c.attr("cols",a);
+c.attr("rows",b.length);
+this._containerElem.css({width:(a+3)+"em",height:c.height()})
+}},isVisible:function(){return $defined(this._containerElem)&&this._containerElem.css("display")=="block"
 },_updateModel:function(){if(this._topic.getText()!=this._getText()){var c=this._getText();
 var a=this._topic.getId();
 var b=mindplot.ActionDispatcher.getInstance();
@@ -3402,7 +3425,7 @@ b.changeTextToTopic([a],c)
 }},show:function(b,c){if(this._topic){this.close(false)
 }this._topic=b;
 if(!this.isVisible()){var a=this._buildEditor();
-a.inject($(document.body));
+$("body").append(a);
 this._containerElem=a;
 this._registerEvents(a);
 this._showEditor(c)
@@ -3413,14 +3436,16 @@ var a=e.getFont();
 a.size=e.getHtmlFontSize();
 a.color=e.getColor();
 this._setStyle(a);
-var d=function(){var g=b.getTextShape();
-g.positionRelativeTo(this._containerElem,{position:{x:"left",y:"top"},edge:{x:"left",y:"top"}});
-this._containerElem.setStyle("display","block");
-var h=$defined(c)?c:b.getText();
-this._setText(h);
-var f=this._getTextareaElem();
-this._positionCursor(f,!$defined(c))
-}.bind(this);
+var f=this;
+var d=function(){var h=b.getTextShape();
+f._containerElem.css("display","block");
+var i=h.getNativePosition();
+f._containerElem.offset(i);
+var j=$defined(c)?c:b.getText();
+f._setText(j);
+var g=f._getTextareaElem();
+f._positionCursor(g,!$defined(c))
+};
 this._timeoutId=d.delay(10)
 },_setStyle:function(c){var a=this._getTextareaElem();
 if(!$defined(c.font)){c.font="Arial"
@@ -3428,25 +3453,30 @@ if(!$defined(c.font)){c.font="Arial"
 }if(!$defined(c.weight)){c.weight="normal"
 }if(!$defined(c.size)){c.size=12
 }var b={fontSize:c.size+"px",fontFamily:c.font,fontStyle:c.style,fontWeight:c.weight,color:c.color};
-a.setStyles(b);
-this._containerElem.setStyles(b)
+a.css(b);
+this._containerElem.css(b)
 },_setText:function(a){var b=this._getTextareaElem();
-b.value=a;
+b.val(a);
 this._adjustEditorSize()
-},_getText:function(){return this._getTextareaElem().value
-},_getTextareaElem:function(){return this._containerElem.getElement("textarea")
-},_positionCursor:function(d,c){d.focus();
-if(c){if(d.createTextRange){var b=d.createTextRange();
+},_getText:function(){return this._getTextareaElem().val()
+},_getTextareaElem:function(){return this._containerElem.find("textarea")
+},_positionCursor:function(e,d){e.focus();
+var c=e.val().length;
+if(d){if(e.createTextRange){var b=e.createTextRange();
 b.select();
-b.move("character",d.value.length)
-}else{d.setSelectionRange(0,d.value.length)
-}}else{if(d.createTextRange){var a=d.createTextRange();
-a.move("character",d.value.length)
-}else{d.selectionStart=d.value.length
+b.move("character",c)
+}else{e[0].setSelectionRange(0,c)
+}}else{if(e.createTextRange){var a=e.createTextRange();
+a.move("character",c)
+}else{if(Browser.ie11){e[0].selectionStart=c;
+e[0].selectionEnd=c
+}else{e.selectionStart=c;
+e.selectionEnd=c
+}e.focus()
 }}},close:function(a){if(this.isVisible()&&this._topic){clearTimeout(this._timeoutId);
 if(!$defined(a)||a){this._updateModel()
 }this._topic.getTextShape().setVisibility(true);
-this._containerElem.dispose();
+this._containerElem.remove();
 this._containerElem=null;
 this._timeoutId=-1
 }this._topic=null
@@ -3511,16 +3541,13 @@ if(!f){a.x=a.x+e
 }a.x=Math.ceil(a.x);
 a.y=Math.ceil(a.y);
 return a
-}};mindplot.util.FadeEffect=new Class({Extends:Fx,initialize:function(b,a){this.parent({duration:3000,frames:15,transition:"linear"});
-this._isVisible=a;
-this._element=b;
-this.addEvent("complete",function(){this._element.each(function(c){if(c){c.setVisibility(a)
-}})
-})
-},start:function(){this.parent(this._isVisible?0:1,this._isVisible?1:0)
-},set:function(a){this._element.each(function(b){if(b){b.setOpacity(a)
+}};mindplot.util.FadeEffect=new Class({Extends:mindplot.Events,initialize:function(b,a){this._isVisible=a;
+this._element=b
+},start:function(){var a=this._isVisible;
+_.each(this._element,function(b){if(b){b.setVisibility(a)
 }});
-return this
+this._isVisible=!a;
+this.fireEvent("complete")
 }});mindplot.persistence.ModelCodeName={BETA:"beta",PELA:"pela",TANGO:"tango"};mindplot.persistence.XMLSerializer_Pela=new Class({toXML:function(o){$assert(o,"Can not save a null mindmap");
 var m=core.Utils.createDocument();
 var n=m.createElement("map");
@@ -3614,7 +3641,7 @@ return c
 $assert(k,"mapId can not be null");
 var c=d.documentElement;
 $assert(c.tagName==mindplot.persistence.XMLSerializer_Pela.MAP_ROOT_NODE,"This seem not to be a map document.");
-this._idsMap=new Hash();
+this._idsMap={};
 var h=c.getAttribute("version");
 var j=new mindplot.model.Mindmap(k,h);
 var b=c.childNodes;
@@ -3633,8 +3660,8 @@ return j
 },_deserializeNode:function(b,a){var g=(b.getAttribute("central")!=null)?mindplot.model.INodeModel.CENTRAL_TOPIC_TYPE:mindplot.model.INodeModel.MAIN_TOPIC_TYPE;
 var y=b.getAttribute("id");
 if($defined(y)){y=parseInt(y)
-}if(this._idsMap.has(y)){y=null
-}else{this._idsMap.set(y,b)
+}if(this._idsMap[y]){y=null
+}else{this._idsMap[y]=b
 }var B=a.createNode(g,y);
 var t=b.getAttribute("text");
 if($defined(t)&&t){B.setText(t)
@@ -3775,13 +3802,13 @@ var a=core.Utils.createDocument();
 var g=a.createElement("map");
 var e=b.getId();
 if($defined(e)){g.setAttribute("name",e)
-}a.appendChild(g);
+}a.append(g);
 var h=b.getBranches();
 for(var f=0;
 f<h.length;
 f++){var d=h[f];
 var c=this._topicToXML(a,d);
-g.appendChild(c)
+g.append(c)
 }return a
 },_topicToXML:function(v,w){var t=v.createElement("topic");
 if(w.getType()==mindplot.model.INodeModel.CENTRAL_TOPIC_TYPE){t.setAttribute("central",true)
@@ -3817,25 +3844,25 @@ for(z=0;
 z<D.length;
 z++){var C=D[z];
 var A=this._iconToXML(v,C);
-t.appendChild(A)
+t.append(A)
 }var b=w.getLinks();
 for(z=0;
 z<b.length;
 z++){var o=b[z];
 var k=this._linkToXML(v,o);
-t.appendChild(k)
+t.append(k)
 }var q=w.getNotes();
 for(z=0;
 z<q.length;
 z++){var d=q[z];
 var x=this._noteToXML(v,d);
-t.appendChild(x)
+t.append(x)
 }var n=w.getChildren();
 for(z=0;
 z<n.length;
 z++){var g=n[z];
 var j=this._topicToXML(v,g);
-t.appendChild(j)
+t.append(j)
 }return t
 },_iconToXML:function(a,c){var b=a.createElement("icon");
 b.setAttribute("id",c.getIconType());
@@ -3910,18 +3937,20 @@ return mindplot.TopicFeature.createModel(mindplot.TopicFeature.Note.id,{text:b==
 mindplot.persistence.XMLSerializer_Beta.MAP_ROOT_NODE="map";mindplot.persistence.Beta2PelaMigrator=new Class({initialize:function(a){this._betaSerializer=a;
 this._pelaSerializer=new mindplot.persistence.XMLSerializer_Pela()
 },toXML:function(a){return this._pelaSerializer.toXML(a)
-},loadFromDom:function(d,c){$assert($defined(c),"mapId can not be null");
-var a=this._betaSerializer.loadFromDom(d,c);
+},loadFromDom:function(e,c){$assert($defined(c),"mapId can not be null");
+var a=this._betaSerializer.loadFromDom(e,c);
 a.setVersion(mindplot.persistence.ModelCodeName.PELA);
 var b=a.getBranches();
-b.each(function(e){this._fixPosition(e)
-}.bind(this));
+var d=this;
+_.each(b,function(f){d._fixPosition(f)
+});
 return a
-},_fixPosition:function(a){var c=a.getPosition();
-var b=c.x>0;
-a.getChildren().each(function(d){if(!d.getPosition()){d.setPosition(c.x+(50*b?1:-1),c.y)
-}this._fixPosition(d)
-}.bind(this))
+},_fixPosition:function(a){var d=a.getPosition();
+var c=d.x>0;
+var b=this;
+_.each(a.getChildren(),function(e){if(!e.getPosition()){e.setPosition(d.x+(50*c?1:-1),d.y)
+}b._fixPosition(e)
+})
 }});mindplot.persistence.XMLSerializerFactory={};
 mindplot.persistence.XMLSerializerFactory.getSerializerFromMindmap=function(a){return mindplot.persistence.XMLSerializerFactory.getSerializer(a.getVersion())
 };
@@ -3951,7 +3980,7 @@ $assert(j,"mapId can not be null");
 var g=mindplot.persistence.XMLSerializerFactory.getSerializerFromMindmap(h);
 var f=g.toXML(h);
 var a=core.Utils.innerXML(f);
-var l=JSON.encode(c);
+var l=JSON.stringify(c);
 try{this.saveMapXml(j,a,l,i,k,d)
 }catch(b){console.log(b);
 k.onError(this._buildError())
@@ -3977,61 +4006,54 @@ this.revertUrl=a.revertUrl;
 this.lockUrl=a.lockUrl;
 this.timestamp=a.timestamp;
 this.session=a.session
-},saveMapXml:function(h,a,j,g,i,e){var c={id:h,xml:a,properties:j};
-var f=this;
-var d="minor="+!g;
-d=d+"&timestamp="+this.timestamp;
-d=d+"&session="+this.session;
-if(!f.onSave){f.onSave=true;
-f.clearTimeout=setTimeout(function(){f.clearTimeout=null;
-f.onSave=false
+},saveMapXml:function(g,a,i,f,h,d){var b={id:g,xml:a,properties:i};
+var e=this;
+var c="minor="+!f;
+c=c+"&timestamp="+this.timestamp;
+c=c+"&session="+this.session;
+if(!e.onSave){e.onSave=true;
+e.clearTimeout=setTimeout(function(){e.clearTimeout=null;
+e.onSave=false
 },10000);
-var b=new Request({url:this.documentUrl.replace("{id}",h)+"?"+d,method:"put",async:!e,onSuccess:function(k,l){f.timestamp=k;
-i.onSuccess()
-},onException:function(l,k){i.onError(f._buildError())
-},onComplete:function(){if(f.clearTimeout){clearTimeout(f.clearTimeout)
-}f.onSave=false
-},onFailure:function(o){var m=o.responseText;
-var k={severity:"SEVERE",message:$msg("SAVE_COULD_NOT_BE_COMPLETED")};
-var p=this.getHeader("Content-Type");
-if(p!=null&&p.indexOf("application/json")!=-1){var l=null;
-try{l=JSON.decode(m);
-l=l.globalSeverity?l:null
-}catch(n){}k=f._buildError(l)
-}else{if(this.status==405){k={severity:"SEVERE",message:$msg("SESSION_EXPIRED")}
-}}i.onError(k);
-f.onSave=false
-},headers:{"Content-Type":"application/json; charset=utf-8",Accept:"application/json"},emulation:false,urlEncoded:false});
-b.put(JSON.encode(c))
-}},discardChanges:function(a){var b=new Request({url:this.revertUrl.replace("{id}",a),async:false,method:"post",onSuccess:function(){},onException:function(){},onFailure:function(){},headers:{"Content-Type":"application/json; charset=utf-8",Accept:"application/json"},emulation:false,urlEncoded:false});
-b.post()
+$.ajax({url:this.documentUrl.replace("{id}",g)+"?"+c,type:"put",dataType:"json",data:JSON.stringify(b),contentType:"application/json; charset=utf-8",async:!d,success:function(k,l,j){e.timestamp=k;
+h.onSuccess()
+},error:function(j,l,k){h.onError(e._buildError())
+},complete:function(){if(e.clearTimeout){clearTimeout(e.clearTimeout)
+}e.onSave=false
+},fail:function(n,p){var l=n.responseText;
+var j={severity:"SEVERE",message:$msg("SAVE_COULD_NOT_BE_COMPLETED")};
+var o=n.getResponseHeader("Content-Type");
+if(o!=null&&o.indexOf("application/json")!=-1){var k=null;
+try{k=$.parseJSON(l);
+k=k.globalSeverity?k:null
+}catch(m){}j=e._buildError(k)
+}else{if(this.status==405){j={severity:"SEVERE",message:$msg("SESSION_EXPIRED")}
+}}h.onError(j);
+e.onSave=false
+}})
+}},discardChanges:function(a){$.ajax({url:this.revertUrl.replace("{id}",a),async:false,method:"post",headers:{"Content-Type":"application/json; charset=utf-8",Accept:"application/json"}})
 },unlockMap:function(a){var b=a.getId();
-var c=new Request({url:this.lockUrl.replace("{id}",b),async:false,method:"put",onSuccess:function(){},onException:function(){},onFailure:function(){},headers:{"Content-Type":"text/plain"},emulation:false,urlEncoded:false});
-c.put("false")
+$.ajax({url:this.lockUrl.replace("{id}",b),async:false,method:"put",headers:{"Content-Type":"text/plain"},data:"false"})
 },_buildError:function(c){var b=c?c.globalErrors[0]:null;
 var a=c?c.globalSeverity:null;
 if(!b){b=$msg("SAVE_COULD_NOT_BE_COMPLETED")
 }if(!a){a="INFO"
 }return{severity:a,message:b}
 },loadMapDom:function(b){var a;
-var c=new Request({url:this.documentUrl.replace("{id}",b)+"/xml",method:"get",async:false,headers:{"Content-Type":"text/plain",Accept:"application/xml"},onSuccess:function(e){a=e
+$.ajax({url:this.documentUrl.replace("{id}",b)+"/xml",method:"get",async:false,headers:{"Content-Type":"text/plain",Accept:"application/xml"},success:function(c){a=c
 }});
-c.send();
 if(a==null){throw new Error("Map could not be loaded")
-}var d=new DOMParser();
-return d.parseFromString(a,"text/xml")
+}return a
 }});mindplot.LocalStorageManager=new Class({Extends:mindplot.PersistenceManager,initialize:function(a,b){this.parent();
 this.documentUrl=a;
 this.forceLoad=b
 },saveMapXml:function(c,d,a,e,b){localStorage.setItem(c+"-xml",d)
 },discardChanges:function(a){localStorage.removeItem(a+"-xml")
 },loadMapDom:function(b){var a=localStorage.getItem(b+"-xml");
-if(a==null||this.forceLoad){var c=new Request({url:this.documentUrl.replace("{id}",b),headers:{"Content-Type":"text/plain",Accept:"application/xml"},method:"get",async:false,onSuccess:function(e){a=e
+if(a==null||this.forceLoad){$.ajax({url:this.documentUrl.replace("{id}",b),headers:{"Content-Type":"text/plain",Accept:"application/xml"},type:"get",dataType:"text",async:false,success:function(c){a=c
 }});
-c.send();
 if(a==null){throw new Error("Map could not be loaded")
-}}var d=new DOMParser();
-return d.parseFromString(a,"text/xml")
+}}return jQuery.parseXML(a)
 },unlockMap:function(a){}});mindplot.EditorProperties=new Class({initialize:function(){this._zoom=0;
 this._position=0
 },setZoom:function(a){this._zoom=a
@@ -4056,10 +4078,10 @@ this._icons.push(b);
 this._resize(this._icons.length);
 this._positionIcon(b,this._icons.length-1);
 var c=b.getImage();
-this._group.appendChild(c);
+this._group.append(c);
 if(a){this._removeTip.decorate(this._topicId,b)
 }},_findIconFromModel:function(b){var a=null;
-this._icons.each(function(d){var c=d.getModel();
+_.each(this._icons,function(d){var c=d.getModel();
 if(c.getId()==b.getId()){a=d
 }},this);
 if(a==null){throw new Error("Icon can no be found:"+b.getId()+", Icons:"+this._icons)
@@ -4072,8 +4094,9 @@ this._removeTip.close(0);
 this._group.removeChild(a.getImage());
 this._icons.erase(a);
 this._resize(this._icons.length);
-this._icons.each(function(c,b){this._positionIcon(c,b)
-}.bind(this))
+var b=this;
+_.each(this._icons,function(d,c){b._positionIcon(d,c)
+})
 },moveToFront:function(){this._group.moveToFront()
 },_registerListeners:function(){this._group.addEvent("click",function(a){a.stopPropagation()
 });
@@ -4090,53 +4113,56 @@ mindplot.IconGroup.RemoveTip=new Class({initialize:function(a){$assert(a,"group 
 this._fadeElem=a
 },show:function(b,a){$assert(a,"icon can not be null");
 if(this._activeIcon!=a){if(this._activeIcon){this.close(0)
-}var d=a.getPosition();
-var c=this._buildWeb2d();
-c.addEvent("click",function(){a.remove()
+}var e=a.getPosition();
+var d=this._buildWeb2d();
+d.addEvent("click",function(){a.remove()
 });
-c.addEvent("mouseover",function(){this.show(b,a)
-}.bind(this));
-c.addEvent("mouseout",function(){this.hide()
-}.bind(this));
-c.setPosition(d.x+80,d.y-50);
-this._fadeElem.appendChild(c);
+var c=this;
+d.addEvent("mouseover",function(){c.show(b,a)
+});
+d.addEvent("mouseout",function(){c.hide()
+});
+d.setPosition(e.x+80,e.y-50);
+this._fadeElem.append(d);
 this._activeIcon=a;
-this._widget=c
+this._widget=d
 }else{clearTimeout(this._closeTimeoutId)
 }},hide:function(){this.close(200)
 },close:function(a){if(this._closeTimeoutId){clearTimeout(this._closeTimeoutId)
-}if(this._activeIcon){var b=this._widget;
-var c=function(){this._activeIcon=null;
-this._fadeElem.removeChild(b);
-this._widget=null;
-this._closeTimeoutId=null
-}.bind(this);
-if(!$defined(a)||a==0){c()
-}else{this._closeTimeoutId=c.delay(a)
+}var b=this;
+if(this._activeIcon){var c=this._widget;
+var d=function(){b._activeIcon=null;
+b._fadeElem.removeChild(c);
+b._widget=null;
+b._closeTimeoutId=null
+};
+if(!$defined(a)||a==0){d()
+}else{this._closeTimeoutId=d.delay(a)
 }}},_buildWeb2d:function(){var b=new web2d.Group({width:10,height:10,x:0,y:0,coordSizeWidth:10,coordSizeHeight:10});
 var d=new web2d.Rect(0,{x:0,y:0,width:10,height:10,stroke:"0",fillColor:"black"});
-b.appendChild(d);
+b.append(d);
 d.setCursor("pointer");
 var e=new web2d.Rect(0,{x:1,y:1,width:8,height:8,stroke:"1 solid white",fillColor:"gray"});
-b.appendChild(e);
+b.append(e);
 var c=new web2d.Line({stroke:"1 solid white"});
 c.setFrom(1,1);
 c.setTo(9,9);
-b.appendChild(c);
+b.append(c);
 var a=new web2d.Line({stroke:"1 solid white"});
 a.setFrom(1,9);
 a.setTo(9,1);
-b.appendChild(a);
+b.append(a);
 b.addEvent("mouseover",function(){e.setFill("#CC0033")
 });
 b.addEvent("mouseout",function(){e.setFill("gray")
 });
 b.setSize(50,50);
 return b
-},decorate:function(b,a){if(!a.__remove){a.addEvent("mouseover",function(){this.show(b,a)
-}.bind(this));
-a.addEvent("mouseout",function(){this.hide()
-}.bind(this));
+},decorate:function(b,a){var c=this;
+if(!a.__remove){a.addEvent("mouseover",function(){c.show(b,a)
+});
+a.addEvent("mouseout",function(){c.hide()
+});
 a.__remove=true
 }}});mindplot.Icon=new Class({initialize:function(a){$assert(a,"topic can not be null");
 this._image=new web2d.Image();
@@ -4158,10 +4184,18 @@ this._topic=b;
 this._readOnly=c;
 this._registerEvents()
 },_registerEvents:function(){this._image.setCursor("pointer");
-if(!this._readOnly){this.addEvent("click",function(a){this._topic.showLinkEditor();
-a.stopPropagation()
-}.bind(this))
-}this._tip=new mindplot.widget.LinkIconTooltip(this)
+this._tip=new mindplot.widget.LinkIconTooltip(this);
+var a=this;
+if(!this._readOnly){this.addEvent("click",function(b){a._tip.hide();
+a._topic.showLinkEditor();
+b.stopPropagation()
+});
+this.addEvent("mouseleave",function(b){window.setTimeout(function(){if(!$("#linkPopover:hover").length){a._tip.hide()
+}b.stopPropagation()
+},100)
+})
+}$(this.getImage()._peer._native).mouseenter(function(){a._tip.show()
+})
 },getModel:function(){return this._linksModel
 }});
 mindplot.LinkIcon.IMAGE_URL="images/links.png";mindplot.NoteIcon=new Class({Extends:mindplot.Icon,initialize:function(a,c,b){$assert(a,"topic can not be null");
@@ -4171,20 +4205,19 @@ this._topic=a;
 this._readOnly=b;
 this._registerEvents()
 },_registerEvents:function(){this._image.setCursor("pointer");
-if(!this._readOnly){this.addEvent("click",function(a){this._topic.showNoteEditor();
-a.stopPropagation()
-}.bind(this))
-}this._tip=new mindplot.widget.FloatingTip(this.getImage()._peer._native,{content:function(){var a=new Element("div");
-a.setStyles({padding:"5px"});
-var c=new Element("div",{text:$msg("NOTE")});
-c.setStyles({"font-weight":"bold",color:"black","padding-bottom":"5px",width:"100px"});
-c.inject(a);
-var b=new Element("div",{text:this._linksModel.getText()});
-b.setStyles({"white-space":"pre-wrap","word-wrap":"break-word"});
-b.inject(a);
+var a=this;
+if(!this._readOnly){this.addEvent("click",function(b){a._topic.showNoteEditor();
+b.stopPropagation()
+})
+}this._tip=new mindplot.widget.FloatingTip($(a.getImage()._peer._native),{title:$msg("NOTE"),container:"body",content:function(){return a._buildTooltipContent()
+},html:true,placement:"bottom",destroyOnExit:true})
+},_buildTooltipContent:function(){if($("body").find("#textPopoverNote").length==1){var b=$("body").find("#textPopoverNote");
+b.text(this._linksModel.getText())
+}else{var a=$('<div id="textPopoverNote"></div>').css({padding:"5px"});
+var b=$("<div></div>").text(this._linksModel.getText()).css({"white-space":"pre-wrap","word-wrap":"break-word"});
+a.append(b);
 return a
-}.bind(this),html:true,position:"bottom",arrowOffset:10,center:true,arrowSize:15,offset:{x:10,y:20},className:"notesTip"})
-},getModel:function(){return this._linksModel
+}},getModel:function(){return this._linksModel
 }});
 mindplot.NoteIcon.IMAGE_URL="images/notes.png";mindplot.ActionIcon=new Class({Extends:mindplot.Icon,initialize:function(b,a){this.parent(a);
 this._node=b
@@ -4192,26 +4225,27 @@ this._node=b
 },setPosition:function(a,c){var b=this.getSize();
 this.getImage().setPosition(a-b.width/2,c-b.height/2)
 },addEvent:function(b,a){this.getImage().addEvent(b,a)
-},addToGroup:function(a){a.appendChild(this.getImage())
+},addToGroup:function(a){a.append(this.getImage())
 },setVisibility:function(a){this.getImage().setVisibility(a)
 },isVisible:function(){return this.getImage().isVisible()
 },setCursor:function(a){return this.getImage().setCursor(a)
 },moveToBack:function(a){return this.getImage().moveToBack(a)
 },moveToFront:function(a){return this.getImage().moveToFront(a)
-}});mindplot.ImageIcon=new Class({Extends:mindplot.Icon,initialize:function(b,c,f){$assert(c,"iconModel can not be null");
+}});mindplot.ImageIcon=new Class({Extends:mindplot.Icon,initialize:function(b,d,g){$assert(d,"iconModel can not be null");
 $assert(b,"topic can not be null");
 this._topicId=b.getId();
-this._featureModel=c;
-var a=c.getIconType();
-var e=this._getImageUrl(a);
-this.parent(e);
-if(!f){var d=this.getImage();
-d.addEvent("click",function(){var g=c.getIconType();
-var h=this._getNextFamilyIconId(g);
-c.setIconType(h);
-var i=this._getImageUrl(h);
-this._image.setHref(i)
-}.bind(this));
+this._featureModel=d;
+var a=d.getIconType();
+var f=this._getImageUrl(a);
+this.parent(f);
+if(!g){var e=this.getImage();
+var c=this;
+e.addEvent("click",function(){var h=d.getIconType();
+var i=c._getNextFamilyIconId(h);
+d.setIconType(i);
+var j=c._getImageUrl(i);
+c._image.setHref(j)
+});
 this._image.setCursor("pointer")
 }},_getImageUrl:function(a){return"icons/"+a+".png"
 },getModel:function(){return this._featureModel
@@ -4246,7 +4280,7 @@ return mindplot.model.FeatureModel._uuid
 this._id=mindplot.model.FeatureModel._nextUUID();
 this._type=a;
 this._attributes={};
-this["is"+a.camelCase()+"Model"]=function(){return true
+this["is"+$.camelCase(a)+"Model"]=function(){return true
 }
 },getAttributes:function(){return Object.clone(this._attributes)
 },setAttributes:function(a){for(key in a){this["set"+key.capitalize()](a[key])
@@ -4342,19 +4376,19 @@ a.setCursor("pointer");
 this._controlPointsController=[b,a];
 this._controlLines=[new web2d.Line({strokeColor:"#6589de",strokeWidth:1,opacity:0.3}),new web2d.Line({strokeColor:"#6589de",strokeWidth:1,opacity:0.3})];
 this._isBinded=false;
-this._controlPointsController[0].addEvent("mousedown",function(c){(this._mouseDown.bind(this))(c,mindplot.ControlPoint.FROM)
-}.bind(this));
-this._controlPointsController[0].addEvent("click",function(c){(this._mouseClick.bind(this))(c)
-}.bind(this));
-this._controlPointsController[0].addEvent("dblclick",function(c){(this._mouseClick.bind(this))(c)
-}.bind(this));
-this._controlPointsController[1].addEvent("mousedown",function(c){(this._mouseDown.bind(this))(c,mindplot.ControlPoint.TO)
-}.bind(this));
-this._controlPointsController[1].addEvent("click",function(c){(this._mouseClick.bind(this))(c)
-}.bind(this));
-this._controlPointsController[1].addEvent("dblclick",function(c){(this._mouseClick.bind(this))(c)
-}.bind(this))
-},setSide:function(a){this._side=a
+var c=this;
+this._controlPointsController[0].addEvent("mousedown",function(d){(c._mouseDown)(d,mindplot.ControlPoint.FROM,c)
+});
+this._controlPointsController[0].addEvent("click",function(d){(c._mouseClick)(d)
+});
+this._controlPointsController[0].addEvent("dblclick",function(d){(c._mouseClick)(d)
+});
+this._controlPointsController[1].addEvent("mousedown",function(d){(c._mouseDown)(d,mindplot.ControlPoint.TO,c)
+});
+this._controlPointsController[1].addEvent("click",function(d){(c._mouseClick)(d)
+});
+this._controlPointsController[1].addEvent("dblclick",function(d){(c._mouseClick)(d)
+})
 },setLine:function(a){if($defined(this._line)){this._removeLine()
 }this._line=a;
 this._createControlPoint();
@@ -4374,30 +4408,30 @@ a=this._line.getLine().getTo();
 this._controlLines[1].setFrom(a.x,a.y);
 this._controlLines[1].setTo(this._controls[mindplot.ControlPoint.TO].x+a.x+3,this._controls[mindplot.ControlPoint.TO].y+a.y);
 this._controlPointsController[1].setPosition(this._controls[mindplot.ControlPoint.TO].x+a.x,this._controls[mindplot.ControlPoint.TO].y+a.y-3)
-},_removeLine:function(){},_mouseDown:function(b,a){if(!this._isBinded){this._isBinded=true;
-this._mouseMoveFunction=function(c){(this._mouseMoveEvent.bind(this))(c,a)
-}.bind(this);
+},_removeLine:function(){},_mouseDown:function(c,a,b){if(!this._isBinded){this._isBinded=true;
+this._mouseMoveFunction=function(d){(b._mouseMoveEvent)(d,a,b)
+};
 this._workspace.getScreenManager().addEvent("mousemove",this._mouseMoveFunction);
-this._mouseUpFunction=function(c){(this._mouseUp.bind(this))(c,a)
-}.bind(this);
+this._mouseUpFunction=function(d){(b._mouseUp)(d,a,b)
+};
 this._workspace.getScreenManager().addEvent("mouseup",this._mouseUpFunction)
-}b.preventDefault();
-b.stop();
+}c.preventDefault();
+c.stopPropagation();
 return false
-},_mouseMoveEvent:function(d,a){var b=this._workspace.getScreenManager();
-var f=b.getWorkspaceMousePosition(d);
-var c=null;
-if(a==0){var e=mindplot.util.Shape.calculateRelationShipPointCoordinates(this._line.getSourceTopic(),f);
-this._line.setFrom(e.x,e.y);
-this._line.setSrcControlPoint(new core.Point(f.x-e.x,f.y-e.y))
-}else{var e=mindplot.util.Shape.calculateRelationShipPointCoordinates(this._line.getTargetTopic(),f);
-this._line.setTo(e.x,e.y);
-this._line.setDestControlPoint(new core.Point(f.x-e.x,f.y-e.y))
-}this._controls[a].x=(f.x-e.x);
-this._controls[a].y=(f.y-e.y);
-this._controlPointsController[a].setPosition(f.x-5,f.y-3);
-this._controlLines[a].setFrom(e.x,e.y);
-this._controlLines[a].setTo(f.x-2,f.y);
+},_mouseMoveEvent:function(c,a){var b=this._workspace.getScreenManager();
+var e=b.getWorkspaceMousePosition(c);
+var d;
+if(a==0){d=mindplot.util.Shape.calculateRelationShipPointCoordinates(this._line.getSourceTopic(),e);
+this._line.setFrom(d.x,d.y);
+this._line.setSrcControlPoint(new core.Point(e.x-d.x,e.y-d.y))
+}else{d=mindplot.util.Shape.calculateRelationShipPointCoordinates(this._line.getTargetTopic(),e);
+this._line.setTo(d.x,d.y);
+this._line.setDestControlPoint(new core.Point(e.x-d.x,e.y-d.y))
+}this._controls[a].x=(e.x-d.x);
+this._controls[a].y=(e.y-d.y);
+this._controlPointsController[a].setPosition(e.x-5,e.y-3);
+this._controlLines[a].setFrom(d.x,d.y);
+this._controlLines[a].setTo(e.x-2,e.y);
 this._line.getLine().updateLine(a)
 },_mouseUp:function(b,a){this._workspace.getScreenManager().removeEvent("mousemove",this._mouseMoveFunction);
 this._workspace.getScreenManager().removeEvent("mouseup",this._mouseUpFunction);
@@ -4405,7 +4439,7 @@ var c=mindplot.ActionDispatcher.getInstance();
 c.moveControlPoint(this,a);
 this._isBinded=false
 },_mouseClick:function(a){a.preventDefault();
-a.stop();
+a.stopPropagation();
 return false
 },setVisibility:function(a){if(a){this._controlLines[0].moveToFront();
 this._controlLines[1].moveToFront();
@@ -4416,10 +4450,10 @@ this._controlPointsController[1].setVisibility(a);
 this._controlLines[0].setVisibility(a);
 this._controlLines[1].setVisibility(a)
 },addToWorkspace:function(a){this._workspace=a;
-a.appendChild(this._controlPointsController[0]);
-a.appendChild(this._controlPointsController[1]);
-a.appendChild(this._controlLines[0]);
-a.appendChild(this._controlLines[1])
+a.append(this._controlPointsController[0]);
+a.append(this._controlPointsController[1]);
+a.append(this._controlLines[0]);
+a.append(this._controlLines[1])
 },removeFromWorkspace:function(a){this._workspace=null;
 a.removeChild(this._controlPointsController[0]);
 a.removeChild(this._controlPointsController[1]);
@@ -4455,21 +4489,22 @@ this._startArrow=new web2d.Arrow();
 this._startArrow.setStrokeColor(f);
 this._startArrow.setStrokeWidth(2);
 this._startArrow.setFrom(a.x,a.y);
-this._workspace.appendChild(this._pivot);
-this._workspace.appendChild(this._startArrow);
+this._workspace.append(this._pivot);
+this._workspace.append(this._startArrow);
 this._workspace.addEvent("mousemove",this._mouseMoveEvent);
 this._workspace.addEvent("click",this._onClickEvent);
 var c=this._designer.getModel();
 var g=c.getTopics();
-g.each(function(h){h.addEvent("ontfocus",this._onTopicClick)
+_.each(g,function(h){h.addEvent("ontfocus",this._onTopicClick)
 }.bind(this))
 }},dispose:function(){var a=this._workspace;
 if(this._isActive()){a.removeEvent("mousemove",this._mouseMoveEvent);
 a.removeEvent("click",this._onClickEvent);
 var b=this._designer.getModel();
-var c=b.getTopics();
-c.each(function(d){d.removeEvent("ontfocus",this._onTopicClick)
-}.bind(this));
+var d=b.getTopics();
+var c=this;
+_.each(d,function(e){e.removeEvent("ontfocus",c._onTopicClick)
+});
 a.removeChild(this._pivot);
 a.removeChild(this._startArrow);
 a.enableWorkspaceEvents(true);
@@ -4497,7 +4532,7 @@ var c=new core.Point();
 c.x=parseInt(a[0].x)+parseInt(b.x);
 c.y=parseInt(a[0].y)+parseInt(b.y);
 return mindplot.util.Shape.calculateRelationShipPointCoordinates(this._sourceTopic,c)
-},_connectOnFocus:function(d){var a=this._sourceTopic;
+},_connectOnFocus:function(e,d){var a=this._sourceTopic;
 var b=this._designer.getMindmap();
 if(d.getId()!=a.getId()){var c=b.createRelationship(d.getId(),a.getId());
 this._designer._actionDispatcher.addRelationship(c)
@@ -4523,17 +4558,19 @@ this._value=b;
 this._topicsId=a;
 this._commandFunc=c;
 this._oldValues=[]
-},execute:function(a){if(!this.applied){var c=null;
-try{c=a.findTopics(this._topicsId)
-}catch(b){if(this._commandFunc.commandType!="changeTextToTopic"){throw b
-}}if(c!=null){c.each(function(e){var d=this._commandFunc(e,this._value);
-this._oldValues.push(d)
-}.bind(this))
+},execute:function(a){if(!this.applied){var d=null;
+try{d=a.findTopics(this._topicsId)
+}catch(c){if(this._commandFunc.commandType!="changeTextToTopic"){throw c
+}}if(d!=null){var b=this;
+_.each(d,function(f){var e=b._commandFunc(f,b._value);
+b._oldValues.push(e)
+})
 }this.applied=true
 }else{throw"Command can not be applied two times in a row."
-}},undoExecute:function(a){if(this.applied){var b=a.findTopics(this._topicsId);
-b.each(function(d,c){this._commandFunc(d,this._oldValues[c])
-}.bind(this));
+}},undoExecute:function(a){if(this.applied){var c=a.findTopics(this._topicsId);
+var b=this;
+_.each(c,function(e,d){b._commandFunc(e,b._oldValues[d])
+});
 this.applied=false;
 this._oldValues=[]
 }else{throw"undo can not be applied."
@@ -4545,12 +4582,12 @@ this._deletedTopicModels=[];
 this._deletedRelModel=[];
 this._parentTopicIds=[]
 },execute:function(b){var c=this._filterChildren(this._topicIds,b);
-if(c.length>0){c.each(function(g){g.closeEditors();
+if(c.length>0){_.each(c,function(g){g.closeEditors();
 var f=g.getModel();
 var h=this._collectInDepthRelationships(g);
 this._deletedRelModel.append(h.map(function(j){return j.getModel().clone()
 }));
-h.each(function(j){b.deleteRelationship(j)
+_.each(h,function(j){b.deleteRelationship(j)
 });
 var e=f.clone();
 this._deletedTopicModels.push(e);
@@ -4561,19 +4598,19 @@ if(i!=null){d=i.getId()
 b.deleteTopic(g)
 },this)
 }var a=b.findRelationships(this._relIds);
-if(a.length>0){a.each(function(d){this._deletedRelModel.push(d.getModel().clone());
+if(a.length>0){_.each(a,function(d){this._deletedRelModel.push(d.getModel().clone());
 b.deleteRelationship(d)
 },this)
-}},undoExecute:function(c){this._deletedTopicModels.each(function(d){c.createTopic(d)
+}},undoExecute:function(c){_.each(this._deletedTopicModels,function(d){c.createTopic(d)
 },this);
-this._deletedTopicModels.each(function(f,e){var h=c.findTopics(f.getId());
+_.each(this._deletedTopicModels,function(f,e){var h=c.findTopics(f.getId());
 var g=this._parentTopicIds[e];
 if(g){var d=c.findTopics(g);
 c.connect(h[0],d[0])
 }},this);
-this._deletedRelModel.each(function(d){c.addRelationship(d)
-}.bind(this));
-this._deletedTopicModels.each(function(d){var e=c.findTopics(d.getId());
+_.each(this._deletedRelModel,function(d){c.addRelationship(d)
+});
+_.each(this._deletedTopicModels,function(d){var e=c.findTopics(d.getId());
 e[0].setBranchVisibility(true)
 },this);
 if(this._deletedTopicModels.length>0){var a=this._deletedTopicModels[0];
@@ -4584,7 +4621,7 @@ this._parentTopicIds=[];
 this._deletedRelModel=[]
 },_filterChildren:function(d,b){var c=b.findTopics(d);
 var a=[];
-c.each(function(e){var f=e.getParent();
+_.each(c,function(e){var f=e.getParent();
 var g=false;
 while(f!=null&&!g){g=d.contains(f.getId());
 if(g){break
@@ -4634,23 +4671,24 @@ $assert(a==null||a.length==b.length,"parents and models must have the same size"
 this.parent();
 this._models=b;
 this._parentsIds=a
-},execute:function(a){this._models.each(function(e,d){var c=a.createTopic(e);
-if(this._parentsIds){var g=this._parentsIds[d];
-if($defined(g)){var b=a.findTopics(g)[0];
-a.connect(c,b)
-}}else{a.addTopic(c)
-}var f=a._designer;
-f.onObjectFocusEvent(c);
-c.setOnFocus(true);
-c.setVisibility(true)
-}.bind(this))
+},execute:function(a){var b=this;
+_.each(this._models,function(f,e){var d=a.createTopic(f);
+if(b._parentsIds){var h=b._parentsIds[e];
+if($defined(h)){var c=a.findTopics(h)[0];
+a.connect(d,c)
+}}else{a.addTopic(d)
+}var g=a._designer;
+g.onObjectFocusEvent(d);
+d.setOnFocus(true);
+d.setVisibility(true)
+})
 },undoExecute:function(b){var a=[];
-this._models.each(function(c){a.push(c.clone())
+_.each(this._models,function(c){a.push(c.clone())
 });
-this._models.each(function(d){var e=d.getId();
+_.each(this._models,function(d){var e=d.getId();
 var c=b.findTopics(e)[0];
 b.deleteTopic(c)
-}.bind(this));
+});
 this._models=a
 }});mindplot.commands.ChangeFeatureToTopicCommand=new Class({Extends:mindplot.Command,initialize:function(b,c,a){$assert($defined(b),"topicId can not be null");
 $assert($defined(c),"featureId can not be null");
@@ -4744,75 +4782,46 @@ a.setIsDestControlPointCustom(this._wasCustom)
 }this._line.getLine().updateLine(this._point);
 if(this._line.isOnFocus()){this._ctrlPointControler.setLine(a);
 a._refreshShape()
-}}});mindplot.widget.ModalDialogNotifier=new Class({Extends:MooDialog,initialize:function(){this.parent({closeButton:false,destroyOnClose:false,autoOpen:true,useEscKey:false,closeOnOverlayClick:false,title:"",onInitialize:function(a){a.setStyle("opacity",0);
-this.wrapper.setStyle("display","none");
-this.fx=new Fx.Morph(a,{duration:100,transition:Fx.Transitions.Bounce.easeOut})
-},onBeforeOpen:function(){var a=this._buildPanel();
-this.setContent(a);
-this.overlay=new Overlay(this.options.inject,{duration:this.options.duration});
-if(this.options.closeOnOverlayClick){this.overlay.addEvent("click",this.close.bind(this))
-}this.overlay.open();
-this.fx.start({"margin-top":[-200,-100],opacity:[0,1]}).chain(function(){this.fireEvent("show");
-this.wrapper.setStyle("display","block")
-}.bind(this))
-},onBeforeClose:function(){this.fx.start({"margin-top":[-100,0],opacity:0,duration:200}).chain(function(){this.wrapper.setStyle("display","none");
-this.fireEvent("hide")
-}.bind(this))
-}});
-this.message=null
-},show:function(a,b){$assert(a,"message can not be null");
-this._messsage=a;
-this.options.title=$defined(b)?b:"Outch!!. An unexpected error has occurred";
-this.open()
-},destroy:function(){this.parent();
-this.overlay.destroy()
-},_buildPanel:function(){var a=new Element("div");
-a.setStyles({"text-align":"center",width:"400px"});
-var c=new Element("p",{text:this._messsage});
-c.inject(a);
-var b=new Element("img",{src:"images/alert-sign.png"});
-b.inject(a);
-return a
+}}});mindplot.widget.ModalDialogNotifier=new Class({initialize:function(){},show:function(c,e){$assert(c,"message can not be null");
+var b=$('<div class="modal fade"><div class="modal-dialog"><div class="modal-content"><div class="modal-body"></div><div class="alert alert-block alert-warning"><img src="images/alert-sign.png"><div style="display: inline-block" class="alert-content"></div></div><div class="modal-footer"><button type="button" class="btn btn-default" data-dismiss="modal">Close</button></div></div></div></div>');
+var d="<p>"+c+"</p>";
+var a=e?"<h4>"+e+"</h4>":"";
+b.find(".alert-content").append(a+d);
+b.modal()
 }});
 var dialogNotifier=new mindplot.widget.ModalDialogNotifier();
-$notifyModal=dialogNotifier.show.bind(dialogNotifier);mindplot.widget.ToolbarNotifier=new Class({initialize:function(){var a=$("headerNotifier");
-if(a){this._effect=new Fx.Elements(a,{onComplete:function(){a.setStyle("display","none")
-}.bind(this),link:"cancel",duration:8000,transition:Fx.Transitions.Expo.easeInOut})
-}},logError:function(a){this.logMessage(a,mindplot.widget.ToolbarNotifier.MsgKind.ERROR)
-},hide:function(){},logMessage:function(c,b){$assert(c,"msg can not be null");
-var a=$("headerNotifier");
-if(a){a.set("text",c);
-a.setStyle("display","block");
-a.position({relativeTo:$("header"),position:"upperCenter",edge:"centerTop"});
-if(!$defined(b)||b){this._effect.start({0:{opacity:[1,0]}})
-}else{a.setStyle("opacity","1");
-this._effect.pause()
-}}}});
-mindplot.widget.ToolbarNotifier.MsgKind={INFO:1,WARNING:2,ERROR:3,FATAL:4};
+$notifyModal=dialogNotifier.show.bind(dialogNotifier);mindplot.widget.ToolbarNotifier=new Class({initialize:function(){this.container=$("#headerNotifier")
+},hide:function(){this.container.hide()
+},logMessage:function(b,a){$assert(b,"msg can not be null");
+if(this.container&&!this.container.data("transitioning")){this.container.data("transitioning",true);
+this.container.text(b);
+this.container.css({top:"5px",left:($(window).width()-this.container.width())/2-9});
+this.container.show().fadeOut(5000)
+}this.container.data("transitioning",false)
+}});
 var toolbarNotifier=new mindplot.widget.ToolbarNotifier();
-$notify=toolbarNotifier.logMessage.bind(toolbarNotifier);mindplot.widget.ToolbarItem=new Class({Implements:[Events],initialize:function(c,b,a){$assert(c,"buttonId can not be null");
+$notify=function(a){toolbarNotifier.logMessage(a)
+};mindplot.widget.ToolbarItem=new Class({Implements:mindplot.Events,initialize:function(c,b,a){$assert(c,"buttonId can not be null");
 $assert(b,"fn can not be null");
 this._buttonId=c;
 this._fn=b;
 this._options=a;
 this._enable=false;
 this.enable()
-},_registerTip:function(){return new mindplot.widget.FloatingTip($(this._buttonId),{html:false,position:"bottom",arrowOffset:5,center:true,arrowSize:5,showDelay:500,hideDelay:0,className:"toolbarTip",motionOnShow:false,motionOnHide:false,motion:0,distance:0,preventHideOnOver:false})
-},getButtonElem:function(){var a=$(this._buttonId);
+},getButtonElem:function(){var a=$("#"+this._buttonId);
 $assert(a,"Could not find element for "+this._buttonId);
 return a
-}.protect(),getButtonId:function(){return this._buttonId
-},show:function(){this.fireEvent("show")
+}.protect(),show:function(){this.fireEvent("show")
 },hide:function(){this.fireEvent("hide")
 },isTopicAction:function(){return this._options.topicAction
 },isRelAction:function(){return this._options.relAction
 },disable:function(){var a=this.getButtonElem();
-if(this._enable){a.removeEvent("click",this._fn);
+if(this._enable){a.unbind("click",this._fn);
 a.removeClass("buttonOn");
 a.addClass("buttonOff");
 this._enable=false
 }},enable:function(){var a=this.getButtonElem();
-if(!this._enable){a.addEvent("click",this._fn);
+if(!this._enable){a.bind("click",this._fn);
 a.removeClass("buttonOff");
 a.addClass("buttonOn");
 this._enable=true
@@ -4820,370 +4829,221 @@ this._enable=true
 }.protect()});mindplot.widget.ToolbarPaneItem=new Class({Extends:mindplot.widget.ToolbarItem,initialize:function(c,a){$assert(c,"buttonId can not be null");
 $assert(a,"model can not be null");
 this._model=a;
-var b=function(){if(this.isVisible()){this.hide()
-}else{this.show()
-}}.bind(this);
+var d=this;
+var b=function(){d.isVisible()?d.hide():d.show()
+};
 this.parent(c,b,{topicAction:true,relAction:false});
 this._panelElem=this._init();
 this._visible=false
 },_init:function(){var a=this.buildPanel();
-a.setStyle("cursor","default");
+a.css("cursor","default");
 var b=this.getButtonElem();
 var c=this;
-this._tip=new mindplot.widget.FloatingTip(b,{html:true,position:"bottom",arrowOffset:5,center:true,arrowSize:7,showDelay:0,hideDelay:0,content:function(){return c._updateSelectedItem()
-}.bind(this),className:"toolbarPaneTip",motionOnShow:false,motionOnHide:false,motion:0,distance:0,showOn:"xxxx",hideOn:"xxxx",preventHideOnOver:true,offset:{x:-4,y:0}});
-this._tip.addEvent("hide",function(){this._visible=false
-}.bind(this));
-this._tip.addEvent("show",function(){this._visible=true
-}.bind(this));
+this._tip=new mindplot.widget.FloatingTip(b,{html:true,placement:"bottom",content:function(){return c._updateSelectedItem()
+},className:"toolbarPaneTip",trigger:"manual",template:'<div class="popover popoverGray" role="tooltip"><div class="arrow arrowGray"></div><h3 class="popover-title"></h3><div class="popover-content"></div></div>'});
+this._tip.addEvent("hide",function(){c._visible=false
+});
+this._tip.addEvent("show",function(){c._visible=true
+});
 return a
 },getModel:function(){return this._model
 },getPanelElem:function(){return this._panelElem
 }.protect(),show:function(){if(!this.isVisible()){this.parent();
-this._tip.show(this.getButtonElem());
+this._tip.show();
 this.getButtonElem().className="buttonExtActive"
 }},hide:function(){if(this.isVisible()){this.parent();
-this._tip.hide(this.getButtonElem());
+this._tip.hide();
 this.getButtonElem().className="buttonExtOn"
 }},isVisible:function(){return this._visible
 },disable:function(){this.hide();
 var a=this.getButtonElem();
-if(this._enable){a.removeEvent("click",this._fn);
+if(this._enable){a.unbind("click",this._fn);
 a.removeClass("buttonExtOn");
 a.removeClass("buttonOn");
 a.addClass("buttonExtOff");
 this._enable=false
 }},enable:function(){var a=this.getButtonElem();
-if(!this._enable){a.addEvent("click",this._fn);
+if(!this._enable){a.bind("click",this._fn);
 a.removeClass("buttonExtOff");
 a.addClass("buttonExtOn");
 this._enable=true
 }},buildPanel:function(){throw"Method must be implemented"
-}.protect()});mindplot.widget.NoteEditor=new Class({Extends:MooDialog,initialize:function(b){$assert(b,"model can not be null");
+}.protect()});mindplot.widget.NoteEditor=new Class({Extends:BootstrapDialog,initialize:function(b){$assert(b,"model can not be null");
+this._model=b;
+this.parent($msg("Note"),{cancelButton:true,closeButton:true,acceptButton:true,removeButton:typeof b.getValue()!="undefined",onEventData:{model:this._model}});
+this.css({margin:"150px auto"});
 var a=this._buildPanel(b);
-this.parent({closeButton:true,destroyOnClose:true,title:$msg("NOTE"),onInitialize:function(c){c.setStyle("opacity",0);
-this.fx=new Fx.Morph(c,{duration:600,transition:Fx.Transitions.Bounce.easeOut})
-},onBeforeOpen:function(){this.overlay=new Overlay(this.options.inject,{duration:this.options.duration});
-if(this.options.closeOnOverlayClick){this.overlay.addEvent("click",this.close.bind(this))
-}this.overlay.open();
-this.fx.start({"margin-top":[-200,-100],opacity:[0,1]}).chain(function(){this.fireEvent("show")
-}.bind(this))
-},onBeforeClose:function(){this.fx.start({"margin-top":[-100,0],opacity:0}).chain(function(){this.fireEvent("hide")
-}.bind(this));
-this.overlay.destroy()
-}});
 this.setContent(a)
-},_buildPanel:function(d){var a=new Element("div");
-var f=new Element("form",{action:"none",id:"noteFormId"});
-var g=new Element("textarea",{placeholder:$msg("WRITE_YOUR_TEXT_HERE"),required:true,autofocus:"autofocus"});
-if(d.getValue()!=null){g.value=d.getValue()
-}g.setStyles({width:"100%",height:80,resize:"none"});
-g.inject(f);
-f.addEvent("submit",function(i){i.preventDefault();
-i.stopPropagation();
-if(g.value){d.setValue(g.value)
-}this.close()
-}.bind(this));
-var c=new Element("div").setStyles({paddingTop:5,textAlign:"right"});
-var h=new Element("input",{type:"submit",value:$msg("ACCEPT"),"class":"btn-primary"});
-h.addClass("button");
-h.inject(c);
-if($defined(d.getValue())){var b=new Element("input",{type:"button",value:$msg("REMOVE"),"class":"btn-primary"});
-b.setStyle("margin","5px");
-b.addClass("button");
-b.inject(c);
-b.addEvent("click",function(){d.setValue(null);
-this.close()
-}.bind(this));
-c.inject(f)
-}var e=new Element("input",{type:"button",value:$msg("CANCEL"),"class":"btn-secondary"});
-e.setStyle("margin","5px");
-e.addClass("button");
-e.inject(c);
-e.addEvent("click",function(){this.close()
-}.bind(this));
-c.inject(f);
-a.addEvent("keydown",function(i){i.stopPropagation()
+},_buildPanel:function(b){var a=$("<div></div>").css("padding-top","5px");
+var c=$("<form></form>").attr({action:"none",id:"noteFormId"});
+var d=$("<textarea></textarea autofocus>").attr({placeholder:$msg("WRITE_YOUR_TEXT_HERE"),required:"true","class":"form-control"});
+d.css({width:"100%",height:80,resize:"none"});
+d.on("keypress",function(e){e.stopPropagation()
 });
-f.inject(a);
+c.append(d);
+if(b.getValue()!=null){d.val(b.getValue())
+}a.append(c);
 return a
-},show:function(){this.open()
-}});mindplot.widget.LinkEditor=new Class({Extends:MooDialog,initialize:function(b){$assert(b,"model can not be null");
-var a=this._buildPanel(b);
-this.parent({closeButton:true,destroyOnClose:true,title:$msg("LINK"),onInitialize:function(c){c.setStyle("opacity",0);
-this.fx=new Fx.Morph(c,{duration:600,transition:Fx.Transitions.Bounce.easeOut})
-},onBeforeOpen:function(){this.overlay=new Overlay(this.options.inject,{duration:this.options.duration});
-if(this.options.closeOnOverlayClick){this.overlay.addEvent("click",this.close.bind(this))
-}this.overlay.open();
-this.fx.start({"margin-top":[-200,-100],opacity:[0,1]}).chain(function(){this.fireEvent("show")
-}.bind(this))
-},onBeforeClose:function(){this.fx.start({"margin-top":[-100,0],opacity:0}).chain(function(){this.fireEvent("hide")
-}.bind(this));
-this.overlay.destroy()
-}});
-this.setContent(a)
-},_buildPanel:function(e){var j=new Element("div");
-j.setStyle("padding-top","15px");
-var b=new Element("form",{action:"none",id:"linkFormId"});
-var h=new Element("select");
-h.setStyles({margin:"5px"});
-new Element("option",{text:"URL"}).inject(h);
-h.inject(b);
-var g=new Element("input",{placeholder:"http://www.example.com/",type:Browser.ie?"text":"url",required:true,autofocus:"autofocus"});
-if(e.getValue()!=null){g.value=e.getValue()
-}g.setStyles({width:"55%",margin:"0px 10px"});
-g.inject(b);
-var a=new Element("input",{type:"button",value:$msg("OPEN_LINK")});
-a.inject(b);
-a.addEvent("click",function(){window.open(g.value,"_blank","status=1,width=700,height=450,resizable=1")
-});
-b.addEvent("submit",function(k){k.stopPropagation();
-k.preventDefault();
-if(g.value!=null&&g.value.trim()!=""){e.setValue(g.value)
+},onAcceptClick:function(a){a.data.dialog._submitForm(a.data.model)
+},_submitForm:function(b){var a=this._native.find("textarea");
+if(a.val()){b.setValue(a.val())
 }this.close()
-}.bind(this));
-var i=new Element("div").setStyles({paddingTop:5,textAlign:"center"});
-var f=new Element("input",{type:"submit",value:$msg("ACCEPT"),"class":"btn-primary"});
-f.addClass("button");
-f.inject(i);
-if($defined(e.getValue())){var d=new Element("input",{type:"button",value:$msg("REMOVE"),"class":"btn-primary"});
-d.setStyle("margin","5px");
-d.addClass("button");
-d.inject(i);
-d.addEvent("click",function(k){e.setValue(null);
-k.stopPropagation();
-this.close()
-}.bind(this));
-i.inject(b)
-}var c=new Element("input",{type:"button",value:$msg("CANCEL"),"class":"btn-secondary"});
-c.setStyle("margin","5px");
-c.addClass("button");
-c.inject(i);
-c.addEvent("click",function(){this.close()
-}.bind(this));
-i.inject(b);
-j.addEvent("keydown",function(k){k.stopPropagation()
+},onDialogShown:function(){$(this).find("textarea").focus()
+},onRemoveClick:function(a){a.data.model.setValue(null);
+a.data.dialog.close()
+}});mindplot.widget.LinkEditor=new Class({Extends:BootstrapDialog,initialize:function(b){$assert(b,"model can not be null");
+this._model=b;
+this.parent($msg("LINK"),{cancelButton:true,closeButton:true,acceptButton:true,removeButton:typeof b.getValue()!="undefined",errorMessage:true,onEventData:{model:this._model}});
+this.css({margin:"150px auto"});
+var a=this._buildPanel(b);
+this.setContent(a)
+},_buildPanel:function(d){var a=$("<div></div>").css("padding-top","5px");
+this.form=$("<form></form>").attr({action:"none",id:"linkFormId"});
+var h=$("<p></p>").text("Paste your url here:");
+h.css("margin","0px 0px 20px");
+this.form.append(h);
+var f=$("<div></div>").attr({"class":"input-group"});
+var c=$('<input id="inputUrl"/>').attr({placeholder:"http://www.example.com/",required:"true",autofocus:"autofocus","class":"form-control"});
+c.on("keypress",function(i){i.stopPropagation()
 });
-b.inject(j);
-return j
-},show:function(){this.open()
-}});mindplot.widget.FloatingTip=new Class({Implements:[Options,Events],options:{position:"top",center:true,content:"title",html:false,balloon:true,arrowSize:6,arrowOffset:6,distance:7,motion:40,motionOnShow:true,motionOnHide:true,showOn:"mouseenter",hideOn:"mouseleave",showDelay:500,hideDelay:250,className:"floating-tip",offset:{x:0,y:0},preventHideOnOver:true,fx:{duration:"short"}},initialize:function(b,a){this.setOptions(a);
-this.boundShow=function(){this.show(b)
-}.bind(this);
-this.boundHide=function(){this.hide(b)
-}.bind(this);
-if(!["top","right","bottom","left","inside"].contains(this.options.position)){this.options.position="top"
-}this.attach(b)
-},attach:function(a){if(a.retrieve("hasEvents")!==null){return
-}a.addEvent(this.options.showOn,this.boundShow);
-a.addEvent(this.options.hideOn,this.boundHide);
-a.store("hasEvents",true)
-},show:function(b){var a=$(b).retrieve("floatingtip");
-if(a){if(a.getStyle("opacity")==1){clearTimeout(a.retrieve("timeout"));
+if(d.getValue()!=null){c.val(d.getValue())
+}var b=$("<button></button>").attr({type:"button","class":"btn btn-default"});
+b.html($msg("OPEN_LINK")).css("margin-left","0px");
+b.click(function(){window.open(c.val(),"_blank","status=1,width=700,height=450,resize=1")
+});
+var g=$('<span class="input-group-btn"></span>').append(b);
+f.append(c);
+f.append(g);
+this.form.append(f);
+var e=this;
+this.form.unbind("submit").submit(function(j){j.preventDefault();
+if(e.checkURL(c.val())){e.cleanError();
+var i=c.val();
+if(i!=null&&$.trim(i)!=""){d.setValue(i)
+}e.close();
+this.formSubmitted=true
+}else{e.alertError($msg("URL_ERROR"));
+j.stopPropagation()
+}});
+a.append(this.form);
+return a
+},checkURL:function(a){var b=/^(http|https|ftp):\/\/[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$/i;
+return(b.test(a))
+},onAcceptClick:function(a){this.formSubmitted=false;
+$("#linkFormId").trigger("submit");
+if(!this.formSubmitted){a.stopPropagation()
+}},onDialogShown:function(){$(this).find("#inputUrl").focus()
+},onRemoveClick:function(a){a.data.model.setValue(null);
+a.data.dialog.close()
+}});mindplot.widget.FloatingTip=new Class({Implements:[Options,mindplot.Events],options:{animation:true,html:false,placement:"right",selector:false,trigger:"hover",title:"",content:"",delay:0,container:false,destroyOnExit:false},initialize:function(b,a){this.setOptions(a);
+this.element=b;
+this._createPopover()
+},_createPopover:function(){this.element.popover(this.options);
+var a=this;
+if(this.options.destroyOnExit){this.element.one("hidden.bs.popover",function(){a.element.popover("destroy");
+a._createPopover()
+})
+}},show:function(){this.element.popover("show");
+this.fireEvent("show");
 return this
-}}var c=this._create(b);
-if(c==null){return this
-}b.store("floatingtip",c);
-this._animate(c,"in");
-if(this.options.preventHideOnOver){c.addEvent(this.options.showOn,this.boundShow);
-c.addEvent(this.options.hideOn,this.boundHide)
-}this.fireEvent("show",[c,b]);
-return this
-},hide:function(b){var c=b.retrieve("floatingtip");
-if(!c){if(this.options.position=="inside"){try{b=b.getParent().getParent();
-c=b.retrieve("floatingtip")
-}catch(a){}if(!c){return this
-}}else{return this
-}}this._animate(c,"out");
-this.fireEvent("hide",[c,b]);
-return this
-},_create:function(f){var c=this.options;
-var b=c.content;
-var l=c.position;
-if(b=="title"){b="floatingtitle";
-if(!f.get("floatingtitle")){f.setProperty("floatingtitle",f.get("title"))
-}f.set("title","")
-}var e=(typeof(b)=="string"?f.get(b):b(f));
-var d=new Element("div").addClass(c.className).setStyle("margin",0);
-var m=new Element("div").addClass(c.className+"-wrapper").setStyles({margin:0,padding:0,"z-index":d.getStyle("z-index")}).adopt(d);
-if(e){if(c.html){e.inject(d)
-}else{d.set("text",e)
-}}else{return null
-}var g=document.id(document.body);
-m.setStyles({position:"absolute",opacity:0,top:0,left:0}).inject(g);
-if(c.balloon&&!Browser.ie6){var a=new Element("div").addClass(c.className+"-triangle").setStyles({margin:0,padding:0});
-var h={"border-color":d.getStyle("background-color"),"border-width":c.arrowSize,"border-style":"solid",width:0,height:0};
-switch(l){case"inside":case"top":h["border-bottom-width"]=0;
-break;
-case"right":h["border-left-width"]=0;
-h["float"]="left";
-d.setStyle("margin-left",c.arrowSize);
-break;
-case"bottom":h["border-top-width"]=0;
-break;
-case"left":h["border-right-width"]=0;
-if(Browser.ie7){h.position="absolute";
-h.right=0
-}else{h["float"]="right"
-}d.setStyle("margin-right",c.arrowSize);
-break
-}switch(l){case"inside":case"top":case"bottom":h["border-left-color"]=h["border-right-color"]="transparent";
-h["margin-left"]=c.center?m.getSize().x/2-c.arrowSize:c.arrowOffset;
-break;
-case"left":case"right":h["border-top-color"]=h["border-bottom-color"]="transparent";
-h["margin-top"]=c.center?m.getSize().y/2-c.arrowSize:c.arrowOffset;
-break
-}a.setStyles(h).inject(m,(l=="top"||l=="inside")?"bottom":"top")
-}var i=m.getSize();
-var k=f.getCoordinates(g);
-k.right=k.right==null?k.left:k.right;
-k.bottom=k.bottom==null?k.top:k.bottom;
-k.height=!$defined(k.height)?0:k.height;
-k.width=!$defined(k.width)?0:k.width;
-var j={x:k.left+c.offset.x,y:k.top+c.offset.y};
-if(l=="inside"){m.setStyles({width:m.getStyle("width"),height:m.getStyle("height")});
-f.setStyle("position","relative").adopt(m);
-j={x:c.offset.x,y:c.offset.y}
-}else{switch(l){case"top":j.y-=i.y+c.distance;
-break;
-case"right":j.x+=k.width+c.distance;
-break;
-case"bottom":j.y+=k.height+c.distance;
-break;
-case"left":j.x-=i.x+c.distance;
-break
-}}if(c.center){switch(l){case"top":case"bottom":j.x+=(k.width/2-i.x/2);
-break;
-case"left":case"right":j.y+=(k.height/2-i.y/2);
-break;
-case"inside":j.x+=(k.width/2-i.x/2);
-j.y+=(k.height/2-i.y/2);
-break
-}}m.set("morph",c.fx).store("position",j);
-m.setStyles({top:j.y,left:j.x});
-return m
-},_animate:function(a,b){clearTimeout(a.retrieve("timeout"));
-a.store("timeout",(function(d){var f=this.options,e=(b=="in");
-var c={opacity:e?1:0};
-if((f.motionOnShow&&e)||(f.motionOnHide&&!e)){var g=d.retrieve("position");
-if(!g){return
-}switch(f.position){case"inside":case"top":c.top=e?[g.y-f.motion,g.y]:g.y-f.motion;
-break;
-case"right":c.left=e?[g.x+f.motion,g.x]:g.x+f.motion;
-break;
-case"bottom":c.top=e?[g.y+f.motion,g.y]:g.y+f.motion;
-break;
-case"left":c.left=e?[g.x-f.motion,g.x]:g.x-f.motion;
-break
-}}d.morph(c);
-if(!e){d.get("morph").chain(function(){this.dispose()
-}.bind(d))
-}}).delay((b=="in")?this.options.showDelay:this.options.hideDelay,this,a));
+},hide:function(){this.element.popover("hide");
+this.fireEvent("hide");
 return this
 }});mindplot.widget.LinkIconTooltip=new Class({Extends:mindplot.widget.FloatingTip,initialize:function(a){$assert(a,"linkIcon can not be null");
-this.parent(a.getImage()._peer._native,{content:this._buildContent.pass(a,this),html:true,position:"bottom",arrowOffset:10,center:true,arrowSize:15,offset:{x:10,y:20},className:"linkTip"})
-},_buildContent:function(b){var a=new Element("div");
-a.setStyles({padding:"5px",width:"100%"});
-var g=new Element("div",{text:$msg("LINK")});
-g.setStyles({"font-weight":"bold",color:"black","padding-bottom":"5px",width:"100px"});
-g.inject(a);
-var f=new Element("div",{text:"URL: "+b.getModel().getUrl()});
-f.setStyles({"white-space":"pre-wrap","word-wrap":"break-word"});
-f.inject(a);
-var c=new Element("div");
-c.setStyles({width:"100%",textAlign:"right","padding-bottom":"5px","padding-top":"5px"});
-var d=new Element("img",{src:"http://immediatenet.com/t/m?Size=1024x768&URL="+b.getModel().getUrl(),img:b.getModel().getUrl(),alt:b.getModel().getUrl()});
-d.setStyles({padding:"5px"});
-var e=new Element("a",{href:b.getModel().getUrl(),alt:"Open in new window ...",target:"_blank"});
-d.inject(e);
-e.inject(c);
-c.inject(a);
+var b=$(a.getImage()._peer._native);
+this.parent(b,{content:this._buildContent(a),html:true,placement:"bottom",container:"body",title:$msg("LINK"),trigger:"manual",template:'<div id="linkPopover" class="popover" onmouseover="$(this).mouseleave(function() {$(this).fadeOut(200); });" role="tooltip"><div class="arrow"></div><h3 class="popover-title"></h3><div class="popover-content"></div></div>'})
+},_buildContent:function(b){var a=$("<div></div>").css({padding:"5px",width:"100%"});
+var f=$("<div></div>").text("URL: "+b.getModel().getUrl()).css({"white-space":"pre-wrap","word-wrap":"break-word"});
+a.append(f);
+var c=$("<div></div>").css({width:"100%",textAlign:"right","padding-bottom":"5px","padding-top":"5px"});
+var d=$("<img>").prop("src","data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKYAAAAiCAMAAADid1KLAAAC/VBMVEVHmNotYXgwZHs0aH4sa4E5bIMxb4U7boUucZM1cIw8b4Y3cY09cIc6cJNHcIg1dJxFcoQ0dpc3dZ05dKNOcYQ+dJcyd6tCdZ8yeqc7eKFYc4hSdYlUdI41eq5Ld5tddIRMeYs4fLA/fKUwf7k7frJhd4hIfo9LfZROfolod4lce4pCgpJjeYo+gLU1grw8grBqfYh2eohhgI9UhJBIiJhCh7Vbg508ir5rgZI/isR+fog8jbqDfYhVia05js+JgIaLgohFkcU/ktNijqFSkbNkjaZ0i4+IhoqDiItUlKSUhIyMhZyXhIY5mN5TlbFokapGl9iah4mViYk8nNybiIt+kZ1LncRkl7x2laRDnuWhjIldm76Kk45rm6dXn8GHk7mqjo1LpNFsnbZIpOWJmJ6vkIppoL6UmZu3kY1Aq+qRmbpYqNBNqeluodm7k4mJncGknJVaquZorcNTsOporNWwn5SZpqalpZzAnpJssNmMqdl2s9fToI2tqpupq6hwt9rToZRivOLTppG/q5t5utdiwPS3r6iptKNYxPaSurzXq5VtwvBjxfG5tLPCs66Sv9NlyvBkzey+uLfVtpyJxerOuKJi0PvetpjjtZ9s0fdv0/nevJx60vrPwa+TzuaH0u6Z0O/lwqLbxK2Y0+y4zsDixLDTyLvWybaV2fCj1e/xxqKv0+mE4P/Tzs3wy6XK1cLe0b6Z4vKP5P+W5Oyw3vLr1L2o4/uq5fCi5/781aj116/v18Gb6v+Y7Pq64/Ll2s2h6vq26PW55/u56+vr4NPK5/Hy4ra27f/y4NTu4tWu8vzy5NH75Lm/8f775sHi7OfP8P//59Dv69z568TU8fva89b47eDR+ObD+v/978jf8//T+ujM+v/Q++7w9dfO/Pbb+urn+N3S/P3m9/3/9NPM///88+z+9dnr++Di+//6+Nv9+NXp+v/d//Xk/vXz/OP/+eT/+PHo//D1+v3o/v3v/P37/OX8+v7x//P3/f/y/////e7+/fP8/+/9//wrsYRgAAAAAXRSTlMAQObYZgAAAAFiS0dEAIgFHUgAAAAJcEhZcwAACxMAAAsTAQCanBgAAAAHdElNRQfeCxEQLAq+V/fUAAAC50lEQVRYw2NgYGBmHOSAhQEIGJlZ2QY1YGVmZGBgYmYb9ICZi4Fx8LuSjYVpSDiTjXHUmaPOHHXmCHSmYP2Vf8+WGRCp2+meJtE2qdz1wSKq/MCBo8iDVGdydn+oc047dE6eXs6U7NTh31vDTqIzxW40cbGx6d7PoJczgYAsZ04HOpPbU4tNct6bP8tVwYKK1+MPzuaCCshez9ry67Q7G7v1vn9Hqu5pokiCIyT7yr9rBVx6D+zZ2DPPiEDkoc7EVKZ823vPv3+rkA0gJtJ7/p0oMwKayr9pd2j08V0iYGc+Oj/JDSYg+/RSuu2OXXy6d7ZGVH55rYkiCVJt+a7Pf8orQ7gzQfJQZ2JRpnzbQehAAw+yDJcJD7cxF/4sxB23+uu/a+U8dg8N2djsXtiAnfm0i4sNJiD7tImLPfmyVPETTTbODqAzkSVBqn1fWbEJxkrDnQmSh0Y6FmVAZ4IiHVmGc8IiuY3NPIQKJG6Xlf8qcv59//z5599AsDPvRrGxwwRk7yewsUVelpm5E2hQwCtNFEmQaoltf9aWSbPBnQmUhzrTC4syiDO5kGXYhOZP1t+eh8+Z5ktAeZx3zc7Cmxbq6upqAhBnBgJthArIAjkgZ04DOxOYNpElId7067/w3ArkTK5ikDMD4c7EogzqTBQZyRWTTQ+n4nOm5dsEdlDCXOf03p6NzXG9PMyZbDABqDMhkd76WhNFEpSywtr52IRPNek98GLjmIXiTB8syqCRjmwd58Sp4ptLufA5k3fO796IpAXfgvj3XEwJP7uQB+5MmADMmeAs9PKJJookSHXwjzbX6k+psjeWmpXcQnUmFmUgZ+6ZoYAsw6XNxa1BIAuJthz99XF/DBeb0uKvH+dKs8GdCROAORNUIJ3Mv6qJIgkCHPWP/12r5eFMvPJnQ+4xFGdiUQZ0Jmfj14VcSDKjTY9RZ446c9SZo86kijNZB78rWZkYGIfCUBcrwxBwJ2jgcGgMwwIAr63+TOJfjTUAAAAASUVORK5CYII=");
+d.css("padding","5px");
+var e=$("<a></a>").attr({href:b.getModel().getUrl(),alt:"Open in new window ...",target:"_blank"});
+e.append(d);
+c.append(e);
+a.append(c);
 return a
 }});mindplot.widget.KeyboardShortcutTooltip=new Class({Extends:mindplot.widget.FloatingTip,initialize:function(a,d){$assert(a,"buttonElem can not be null");
 $assert(d,"text can not be null");
 this._text=d;
-var b=a.getChildren();
-var c=a.id+"Tip";
-var e=new Element("div",{id:c});
-b[0].inject(e);
-e.inject(a);
-this.parent(e,{content:this._buildContent.pass(a,this),html:true,position:"bottom",arrowOffset:10,center:true,arrowSize:3,offset:{x:0,y:-2},className:"keyboardShortcutTip",preventHideOnOver:false,motionOnShow:false,motionOnHide:false,fx:{duration:"100"}});
-e.addEvent("click",function(f){e.fireEvent("mouseleave",f)
+var b=a.children().first();
+var c=a.attr("id")+"Tip";
+var e=$("<div></div>").attr("id",c);
+e.append(b);
+a.append(e);
+this.parent(e,{content:this._buildContent(),html:true,placement:"bottom",className:"keyboardShortcutTip",template:'<div class="popover popoverBlack" role="tooltip"><div class="arrow arrowBlack"></div><h3 class="popover-title"></h3><div class="popover-content"></div></div>'});
+e.on("click",function(f){e.trigger("mouseleave",f)
 })
-},_buildContent:function(){var a=new Element("div");
-a.setStyles({padding:"3px 0px",width:"100%"});
-var b=new Element("div",{text:this._text});
-b.setStyles({width:"100%",textAlign:"center","font-weight":"bold"});
-b.inject(a);
+},_buildContent:function(){var a=$("<div></div>");
+a.css({padding:"3px 0px",width:"100%",color:"white"});
+var b=$("<div></div>").text(this._text);
+b.css({width:"100%","font-size":"90%",textAlign:"center","font-weight":"bold"});
+a.append(b);
 return a
 }});mindplot.widget.ColorPalettePanel=new Class({Extends:mindplot.widget.ToolbarPaneItem,initialize:function(b,a,c){this._baseUrl=c;
 this.parent(b,a);
 $assert($defined(c),"baseUrl can not be null")
-},_load:function(){if(!mindplot.widget.ColorPalettePanel._panelContent){Asset.css(this._baseUrl+"/colorPalette.css",{id:"colorPaletteStyle",title:"colorPalette"});
+},_load:function(){if(!mindplot.widget.ColorPalettePanel._panelContent){$("<link>").appendTo($("head")).attr({type:"text/css",rel:"stylesheet"}).attr("href",this._baseUrl+"/colorPalette.css");
 var a;
-var b=new Request({url:this._baseUrl+"/colorPalette.html",method:"get",async:false,onRequest:function(){},onSuccess:function(c){a=c
-},onFailure:function(){a="<div>Sorry, your request failed :(</div>"
+$.ajax({url:this._baseUrl+"/colorPalette.html",method:"get",async:false,success:function(b){a=b
+},error:function(){a="<div>Sorry, your request failed :(</div>"
 }});
-b.send();
 mindplot.widget.ColorPalettePanel._panelContent=a
 }return mindplot.widget.ColorPalettePanel._panelContent
-},buildPanel:function(){var b=new Element("div",{"class":"toolbarPanel",id:this._buttonId+"colorPalette"});
-b.innerHTML=this._load();
-var c=b.getElements("div[class=palette-colorswatch]");
+},buildPanel:function(){var c=$('<div class="toolbarPanel"></div>').attr("id",this._buttonId+"colorPalette");
+c.html(this._load());
+var d=c.find("div[class=palette-colorswatch]");
 var a=this.getModel();
-c.each(function(d){d.addEvent("click",function(){var e=d.getStyle("background-color");
-a.setValue(e);
-this.hide()
-}.bind(this))
-}.bind(this));
-return b
-},_updateSelectedItem:function(){var b=this.getPanelElem();
-var d=b.getElements("td[class='palette-cell palette-cell-selected']");
-d.each(function(f){f.className="palette-cell"
+var b=this;
+_.each(d,function(e){$(e).on("click",function(){var f=$(e).css("background-color");
+a.setValue(f);
+b.hide()
+})
 });
-var e=b.getElements("div[class=palette-colorswatch]");
+return c
+},_updateSelectedItem:function(){var b=this.getPanelElem();
+b.find("td[class='palette-cell palette-cell-selected']").attr("class","palette-cell");
+var d=b.find("div[class=palette-colorswatch]");
 var c=this.getModel();
 var a=c.getValue();
-e.each(function(g){var f=g.getStyle("background-color");
+_.each(d,function(f){var e=$(f).css("background-color").rgbToHex();
 if(a!=null&&a[0]=="r"){a=a.rgbToHex()
-}if(a!=null&&a.toUpperCase()==f.toUpperCase()){g.parentNode.className="palette-cell palette-cell-selected"
+}if(a!=null&&a.toUpperCase()==e.toUpperCase()){$(f).parent().attr("class","palette-cell palette-cell-selected")
 }});
 return b
 }});mindplot.widget.ListToolbarPanel=new Class({Extends:mindplot.widget.ToolbarPaneItem,initialize:function(b,a){this.parent(b,a);
 this._initPanel()
-},_initPanel:function(){var a=this.getPanelElem().getElements("div");
-a.each(function(b){b.addEvent("click",function(c){c.stopPropagation();
-this.hide();
-var d=$defined(b.getAttribute("model"))?b.getAttribute("model"):b.id;
-this.getModel().setValue(d)
-}.bind(this))
-}.bind(this))
+},_initPanel:function(){var a=this;
+this.getPanelElem().children("div").bind("click",function(b){b.stopPropagation();
+a.hide();
+var c=$defined($(this).attr("model"))?$(this).attr("model"):$(this).attr("id");
+a.getModel().setValue(c)
+})
 },_updateSelectedItem:function(){var a=this.getPanelElem();
-var b=a.getElements("div");
+var b=a.find("div");
 var c=this.getModel().getValue();
-b.each(function(e){var d=$defined(e.getAttribute("model"))?e.getAttribute("model"):e.id;
+_.each(b,function(e){var d=$defined($(e).attr("model"))?$(e).attr("model"):$(e).attr("id");
 $assert(d,"elemValue can not be null");
-if(d==c){e.className="toolbarPanelLinkSelectedLink"
-}else{e.className="toolbarPanelLink"
+if(d==c){$(e).attr("class","toolbarPanelLinkSelectedLink")
+}else{$(e).attr("class","toolbarPanelLink")
 }});
 return a
 }});mindplot.widget.FontFamilyPanel=new Class({Extends:mindplot.widget.ListToolbarPanel,initialize:function(b,a){this.parent(b,a)
-},buildPanel:function(){var a=new Element("div",{"class":"toolbarPanel",id:"fontFamilyPanel"});
-a.innerHTML='<div id="times" model="Times" class="toolbarPanelLink" style="font-family:times;">Times</div><div id="arial"  model="Arial" style="font-family:arial;">Arial</div><div id="tahoma" model="Tahoma" style="font-family:tahoma;">Tahoma</div><div id="verdana" model="Verdana" style="font-family:verdana;">Verdana</div>';
+},buildPanel:function(){var a=$("<div class='toolbarPanel' id='fontFamilyPanel'></div>");
+a.html('<div id="times" model="Times" class="toolbarPanelLink" style="font-family:times;">Times</div><div id="arial"  model="Arial" style="font-family:arial;">Arial</div><div id="tahoma" model="Tahoma" style="font-family:tahoma;">Tahoma</div><div id="verdana" model="Verdana" style="font-family:verdana;">Verdana</div>');
 return a
 }});mindplot.widget.FontSizePanel=new Class({Extends:mindplot.widget.ListToolbarPanel,initialize:function(b,a){this.parent(b,a)
-},buildPanel:function(){var a=new Element("div",{"class":"toolbarPanel",id:"fontSizePanel"});
-a.innerHTML='<div id="small" model="6" style="font-size:8px">Small</div><div id="normal" model="8" style="font-size:12px">Normal</div><div id="large" model="10" style="font-size:15px">Large</div><div id="huge"  model="15" style="font-size:24px">Huge</div>';
+},buildPanel:function(){var a=$("<div class='toolbarPanel' id='fontSizePanel'></div>");
+a[0].innerHTML='<div id="small" model="6" style="font-size:8px">Small</div><div id="normal" model="8" style="font-size:12px">Normal</div><div id="large" model="10" style="font-size:15px">Large</div><div id="huge"  model="15" style="font-size:24px">Huge</div>';
 return a
 }});mindplot.widget.TopicShapePanel=new Class({Extends:mindplot.widget.ListToolbarPanel,initialize:function(b,a){this.parent(b,a)
-},buildPanel:function(){var a=new Element("div",{"class":"toolbarPanel",id:"topicShapePanel"});
-a.innerHTML='<div id="rectagle" model="rectagle"><img src="images/shape-rectangle.png" alt="Rectangle"></div><div id="rounded_rectagle" model="rounded rectagle" ><img src="images/shape-rectangle-round.png" alt="Rounded Rectangle"></div><div id="line" model="line"><img src="images/shape-line.png" alt="Line"></div><div id="elipse" model="elipse"><img src="images/shape-circle.png"></div>';
+},buildPanel:function(){var a=$("<div class='toolbarPanel' id='topicShapePanel'></div>");
+a[0].innerHTML='<div id="rectagle" model="rectagle"><img src="images/shape-rectangle.png" alt="Rectangle"></div><div id="rounded_rectagle" model="rounded rectagle" ><img src="images/shape-rectangle-round.png" alt="Rounded Rectangle"></div><div id="line" model="line"><img src="images/shape-line.png" alt="Line"></div><div id="elipse" model="elipse"><img src="images/shape-circle.png"></div>';
 return a
 }});mindplot.widget.IconPanel=new Class({Extends:mindplot.widget.ToolbarPaneItem,initialize:function(b,a){this.parent(b,a)
 },_updateSelectedItem:function(){return this.getPanelElem()
-},buildPanel:function(){var g=new Element("div",{"class":"toolbarPanel",id:"IconsPanel"});
-g.setStyles({width:253,height:230,padding:5});
-g.addEvent("click",function(i){i.stopPropagation()
+},buildPanel:function(){var g=$('<div class="toolbarPanel" id="IconsPanel"></div>').css({width:245,height:230});
+g.on("click",function(i){i.stopPropagation()
 });
 var f=0;
 for(var c=0;
@@ -5192,15 +5052,16 @@ c=c+1){var l=mindplot.ImageIcon.prototype.ICON_FAMILIES[c].icons;
 for(var b=0;
 b<l.length;
 b=b+1){var h;
-if((f%12)==0){h=new Element("div").inject(g)
+if((f%12)==0){h=$("<div></div>");
+g.append(h)
 }var k=l[b];
-var d=new Element("img",{id:k,src:mindplot.ImageIcon.prototype._getImageUrl(k)});
-d.setStyles({width:16,height:16,padding:"0px 2px",cursor:"pointer"}).inject(h);
+var d=$("<img>").attr("id",k).attr("src",mindplot.ImageIcon.prototype._getImageUrl(k)).attr("class","panelIcon");
+h.append(d);
 var a=this;
 var e=this.getModel();
-d.addEvent("click",function(i){e.setValue(this.id);
+d.on("click",function(i){e.setValue($(this).attr("id"));
 a.hide()
-}.bind(d));
+});
 f=f+1
 }}return g
 }});mindplot.widget.IMenu=new Class({initialize:function(c,a,b){$assert(c,"designer can not be null");
@@ -5210,9 +5071,10 @@ this._toolbarElems=[];
 this._containerId=a;
 this._mapId=b;
 this._mindmapUpdated=false;
-this._designer.addEvent("modelUpdate",function(){this.setRequireChange(true)
-}.bind(this))
-},clear:function(){this._toolbarElems.each(function(a){a.hide()
+var d=this;
+this._designer.addEvent("modelUpdate",function(){d.setRequireChange(true)
+})
+},clear:function(){_.each(this._toolbarElems,function(a){a.hide()
 })
 },discardChanges:function(b){this.setRequireChange(false);
 var c=mindplot.PersistenceManager.getInstance();
@@ -5226,249 +5088,241 @@ c.unlockMap(a)
 },save:function(h,b,f,c){var a=b.getMindmap();
 var e=b.getMindmapProperties();
 if(f){$notify($msg("SAVING"));
-h.setStyle("cursor","wait")
+h.css("cursor","wait")
 }var g=this;
 var d=mindplot.PersistenceManager.getInstance();
-d.save(a,e,f,{onSuccess:function(){if(f){h.setStyle("cursor","pointer");
+d.save(a,e,f,{onSuccess:function(){if(f){h.css("cursor","pointer");
 $notify($msg("SAVE_COMPLETE"))
 }g.setRequireChange(false)
-},onError:function(i){if(f){h.setStyle("cursor","pointer");
+},onError:function(i){if(f){h.css("cursor","pointer");
 if(i.severity!="FATAL"){$notify(i.message)
 }else{$notifyModal(i.message)
 }}}},c)
 },isSaveRequired:function(){return this._mindmapUpdated
 },setRequireChange:function(a){this._mindmapUpdated=a
-}});mindplot.widget.Menu=new Class({Extends:mindplot.widget.IMenu,initialize:function(G,v,j,A,d){this.parent(G,v,j);
+}});mindplot.widget.Menu=new Class({Extends:mindplot.widget.IMenu,initialize:function(H,v,j,A,d){this.parent(H,v,j);
 d=!$defined(d)?"":d;
 var c=d+"css/widget";
-$(this._containerId).addEvent("click",function(I){I.stopPropagation();
+$("#"+this._containerId).bind("click",function(J){J.stopPropagation();
 return false
 });
-$(this._containerId).addEvent("dblclick",function(I){I.stopPropagation();
+$("#"+this._containerId).bind("dblclick",function(J){J.stopPropagation();
 return false
 });
-var o=G.getModel();
-var l=$("fontFamily");
-if(l){var h={getValue:function(){var K=o.filterSelectedTopics();
-var J=null;
-for(var L=0;
-L<K.length;
-L++){var I=K[L].getFontFamily();
-if(J!=null&&J!=I){J=null;
+var o=H.getModel();
+var l=$("#fontFamily");
+if(l){var h={getValue:function(){var L=o.filterSelectedTopics();
+var K=null;
+for(var M=0;
+M<L.length;
+M++){var J=L[M].getFontFamily();
+if(K!=null&&K!=J){K=null;
 break
-}J=I
-}return J
-},setValue:function(I){G.changeFontFamily(I)
+}K=J
+}return K
+},setValue:function(J){H.changeFontFamily(J)
 }};
 this._toolbarElems.push(new mindplot.widget.FontFamilyPanel("fontFamily",h));
 this._registerTooltip("fontFamily",$msg("FONT_FAMILY"))
-}var k=$("fontSize");
-if(k){var m={getValue:function(){var J=o.filterSelectedTopics();
-var I=null;
-for(var K=0;
-K<J.length;
-K++){var L=J[K].getFontSize();
-if(I!=null&&I!=L){I=null;
+}var k=$("#fontSize");
+if(k){var m={getValue:function(){var K=o.filterSelectedTopics();
+var J=null;
+for(var L=0;
+L<K.length;
+L++){var M=K[L].getFontSize();
+if(J!=null&&J!=M){J=null;
 break
-}I=L
-}return I
-},setValue:function(I){G.changeFontSize(I)
+}J=M
+}return J
+},setValue:function(J){H.changeFontSize(J)
 }};
 this._toolbarElems.push(new mindplot.widget.FontSizePanel("fontSize",m));
 this._registerTooltip("fontSize",$msg("FONT_SIZE"))
-}var t=$("topicShape");
-if(t){var n={getValue:function(){var J=o.filterSelectedTopics();
-var I=null;
-for(var K=0;
-K<J.length;
-K++){var L=J[K].getShapeType();
-if(I!=null&&I!=L){I=null;
+}var t=$("#topicShape");
+if(t){var n={getValue:function(){var K=o.filterSelectedTopics();
+var J=null;
+for(var L=0;
+L<K.length;
+L++){var M=K[L].getShapeType();
+if(J!=null&&J!=M){J=null;
 break
-}I=L
-}return I
-},setValue:function(I){G.changeTopicShape(I)
+}J=M
+}return J
+},setValue:function(J){H.changeTopicShape(J)
 }};
 this._toolbarElems.push(new mindplot.widget.TopicShapePanel("topicShape",n));
 this._registerTooltip("topicShape",$msg("TOPIC_SHAPE"))
-}var C=$("topicIcon");
+}var C=$("#topicIcon");
 if(C){var f={getValue:function(){return null
-},setValue:function(I){G.addIconType(I)
+},setValue:function(J){H.addIconType(J)
 }};
 this._toolbarElems.push(new mindplot.widget.IconPanel("topicIcon",f));
 this._registerTooltip("topicIcon",$msg("TOPIC_ICON"))
-}var D=$("topicColor");
-if(D){var q={getValue:function(){var K=o.filterSelectedTopics();
-var I=null;
-for(var L=0;
-L<K.length;
-L++){var J=K[L].getBackgroundColor();
-if(I!=null&&I!=J){I=null;
+}var D=$("#topicColor");
+if(D){var q={getValue:function(){var L=o.filterSelectedTopics();
+var J=null;
+for(var M=0;
+M<L.length;
+M++){var K=L[M].getBackgroundColor();
+if(J!=null&&J!=K){J=null;
 break
-}I=J
-}return I
-},setValue:function(I){G.changeBackgroundColor(I)
+}J=K
+}return J
+},setValue:function(J){H.changeBackgroundColor(J)
 }};
 this._toolbarElems.push(new mindplot.widget.ColorPalettePanel("topicColor",q,c));
 this._registerTooltip("topicColor",$msg("TOPIC_COLOR"))
-}var B=$("topicBorder");
-if(B){var e={getValue:function(){var K=o.filterSelectedTopics();
-var I=null;
-for(var L=0;
-L<K.length;
-L++){var J=K[L].getBorderColor();
-if(I!=null&&I!=J){I=null;
+}var B=$("#topicBorder");
+if(B){var e={getValue:function(){var L=o.filterSelectedTopics();
+var J=null;
+for(var M=0;
+M<L.length;
+M++){var K=L[M].getBorderColor();
+if(J!=null&&J!=K){J=null;
 break
-}I=J
-}return I
-},setValue:function(I){G.changeBorderColor(I)
+}J=K
+}return J
+},setValue:function(J){H.changeBorderColor(J)
 }};
 this._toolbarElems.push(new mindplot.widget.ColorPalettePanel("topicBorder",e,c));
 this._registerTooltip("topicBorder",$msg("TOPIC_BORDER_COLOR"))
-}var z=$("fontColor");
-if(z){var H={getValue:function(){var I=null;
-var K=o.filterSelectedTopics();
-for(var L=0;
-L<K.length;
-L++){var J=K[L].getFontColor();
-if(I!=null&&I!=J){I=null;
+}var z=$("#fontColor");
+if(z){var I={getValue:function(){var J=null;
+var L=o.filterSelectedTopics();
+for(var M=0;
+M<L.length;
+M++){var K=L[M].getFontColor();
+if(J!=null&&J!=K){J=null;
 break
-}I=J
-}return I
-},setValue:function(I){G.changeFontColor(I)
+}J=K
+}return J
+},setValue:function(J){H.changeFontColor(J)
 }};
-this._toolbarElems.push(new mindplot.widget.ColorPalettePanel("fontColor",H,d));
+this._toolbarElems.push(new mindplot.widget.ColorPalettePanel("fontColor",I,d));
 this._registerTooltip("fontColor",$msg("FONT_COLOR"))
-}this._addButton("export",false,false,function(){var I=new MooDialog.Request("c/iframeWrapper.htm?url=c/maps/"+j+"/exportf",null,{"class":"modalDialog exportModalDialog",closeButton:true,destroyOnClose:true,title:$msg("EXPORT")});
-I.setRequestOptions({onRequest:function(){I.setContent($msg("LOADING"))
-}});
-MooDialog.Request.active=I
+}this._addButton("export",false,false,function(){BootstrapDialog.Request.active=new BootstrapDialog.Request("c/maps/"+j+"/exportf",$msg("EXPORT"),{cancelButton:true,closeButton:true})
 });
 this._registerTooltip("export",$msg("EXPORT"));
-this._addButton("print",false,false,function(){this.save(r,G,false);
-var I=window.location.href.substring(0,window.location.href.lastIndexOf("c/maps/"));
-window.open(I+"c/maps/"+j+"/print")
-}.bind(this));
+var F=this;
+this._addButton("print",false,false,function(){F.save(r,H,false);
+var J=window.location.href.substring(0,window.location.href.lastIndexOf("c/maps/"));
+window.open(J+"c/maps/"+j+"/print")
+});
 this._registerTooltip("print",$msg("PRINT"));
-this._addButton("zoomIn",false,false,function(){G.zoomIn()
+this._addButton("zoomIn",false,false,function(){H.zoomIn()
 });
 this._registerTooltip("zoomIn",$msg("ZOOM_IN"));
-this._addButton("zoomOut",false,false,function(){G.zoomOut()
+this._addButton("zoomOut",false,false,function(){H.zoomOut()
 });
 this._registerTooltip("zoomOut",$msg("ZOOM_OUT"));
-var b=this._addButton("undoEdition",false,false,function(){G.undo()
+var b=this._addButton("undoEdition",false,false,function(){H.undo()
 });
 if(b){b.disable()
 }this._registerTooltip("undoEdition",$msg("UNDO"),"meta+Z");
-var F=this._addButton("redoEdition",false,false,function(){G.redo()
+var G=this._addButton("redoEdition",false,false,function(){H.redo()
 });
-if(F){F.disable()
+if(G){G.disable()
 }this._registerTooltip("redoEdition",$msg("REDO"),"meta+shift+Z");
-if(F&&b){G.addEvent("modelUpdate",function(I){if(I.undoSteps>0){b.enable()
+if(G&&b){H.addEvent("modelUpdate",function(J){if(J.undoSteps>0){b.enable()
 }else{b.disable()
-}if(I.redoSteps>0){F.enable()
-}else{F.disable()
-}}.bind(this))
-}this._addButton("addTopic",true,false,function(){G.createSiblingForSelectedNode()
+}if(J.redoSteps>0){G.enable()
+}else{G.disable()
+}})
+}this._addButton("addTopic",true,false,function(){H.createSiblingForSelectedNode()
 });
 this._registerTooltip("addTopic",$msg("ADD_TOPIC"),"Enter");
-this._addButton("deleteTopic",true,true,function(){G.deleteSelectedEntities()
+this._addButton("deleteTopic",true,true,function(){H.deleteSelectedEntities()
 });
 this._registerTooltip("deleteTopic",$msg("TOPIC_DELETE"),"Delete");
-this._addButton("topicLink",true,false,function(){G.addLink()
+this._addButton("topicLink",true,false,function(){H.addLink()
 });
 this._registerTooltip("topicLink",$msg("TOPIC_LINK"));
-this._addButton("topicRelation",true,false,function(I){G.showRelPivot(I)
+this._addButton("topicRelation",true,false,function(J){H.showRelPivot(J)
 });
 this._registerTooltip("topicRelation",$msg("TOPIC_RELATIONSHIP"));
-this._addButton("topicNote",true,false,function(){G.addNote()
+this._addButton("topicNote",true,false,function(){H.addNote()
 });
 this._registerTooltip("topicNote",$msg("TOPIC_NOTE"));
-this._addButton("fontBold",true,false,function(){G.changeFontWeight()
+this._addButton("fontBold",true,false,function(){H.changeFontWeight()
 });
 this._registerTooltip("fontBold",$msg("FONT_BOLD"),"meta+B");
-this._addButton("fontItalic",true,false,function(){G.changeFontStyle()
+this._addButton("fontItalic",true,false,function(){H.changeFontStyle()
 });
 this._registerTooltip("fontItalic",$msg("FONT_ITALIC"),"meta+I");
-var r=$("save");
-if(r){this._addButton("save",false,false,function(){this.save(r,G,true)
-}.bind(this));
+var r=$("#save");
+if(r){this._addButton("save",false,false,function(){F.save(r,H,true)
+});
 this._registerTooltip("save",$msg("SAVE"),"meta+S");
-if(!A){Element.NativeEvents.unload=1;
-$(window).addEvent("unload",function(){if(this.isSaveRequired()){this.save(r,G,false,true)
-}this.unlockMap(G)
-}.bind(this));
-(function(){if(this.isSaveRequired()){this.save(r,G,false)
-}}.bind(this)).periodical(30000)
-}}var p=$("discard");
-if(p){this._addButton("discard",false,false,function(){this.discardChanges(G)
-}.bind(this));
+if(!A){$(window).bind("unload",function(){if(F.isSaveRequired()){F.save(r,H,false,true)
+}F.unlockMap(H)
+});
+setInterval(function(){if(F.isSaveRequired()){F.save(r,H,false)
+}},30000)
+}}var p=$("#discard");
+if(p){this._addButton("discard",false,false,function(){F.discardChanges(H)
+});
 this._registerTooltip("discard",$msg("DISCARD_CHANGES"))
-}var E=$("shareIt");
-if(E){this._addButton("shareIt",false,false,function(){var I=new MooDialog.Request("c/iframeWrapper?url=c/maps/"+j+"/sharef",null,{"class":"modalDialog shareModalDialog",closeButton:true,destroyOnClose:true,title:$msg("COLLABORATE")});
-I.setRequestOptions({onRequest:function(){I.setContent($msg("LOADING"))
-}});
-MooDialog.Request.active=I
+}var E=$("#shareIt");
+if(E){this._addButton("shareIt",false,false,function(){BootstrapDialog.Request.active=new BootstrapDialog.Request("c/maps/"+j+"/sharef",$msg("COLLABORATE"),{closeButton:true,cancelButton:true});
+H.onObjectFocusEvent()
 });
 this._registerTooltip("shareIt",$msg("COLLABORATE"))
-}var a=$("publishIt");
-if(a){this._addButton("publishIt",false,false,function(){var I=new MooDialog.Request("c/iframeWrapper?url=c/maps/"+j+"/publishf",null,{"class":"modalDialog publishModalDialog",closeButton:true,destroyOnClose:true,title:$msg("PUBLISH")});
-I.setRequestOptions({onRequest:function(){I.setContent($msg("LOADING"))
-}});
-MooDialog.Request.active=I
+}var a=$("#publishIt");
+if(a){this._addButton("publishIt",false,false,function(){BootstrapDialog.Request.active=new BootstrapDialog.Request("c/maps/"+j+"/publishf",$msg("PUBLISH"),{closeButton:true,cancelButton:true});
+H.onObjectFocusEvent()
 });
 this._registerTooltip("publishIt",$msg("PUBLISH"))
-}var y=$("history");
-if(y){this._addButton("history",false,false,function(){var I=new MooDialog.Request("c/iframeWrapper?url=c/maps/"+j+"/historyf",null,{"class":"modalDialog historyModalDialog",closeButton:true,destroyOnClose:true,title:$msg("HISTORY")});
-I.setRequestOptions({onRequest:function(){I.setContent($msg("LOADING"))
-}})
+}var y=$("#history");
+if(y){this._addButton("history",false,false,function(){BootstrapDialog.Request.active=new BootstrapDialog.Request("c/maps/"+j+"/historyf",$msg("HISTORY"),{closeButton:true,cancelButton:true});
+H.onObjectFocusEvent()
 });
 this._registerTooltip("history",$msg("HISTORY"))
-}this._registerEvents(G);
-var i=$("keyboardShortcuts");
-if(i){i.addEvent("click",function(I){var J=new MooDialog.Request("c/keyboard",null,{"class":"modalDialog keyboardModalDialog",closeButton:true,destroyOnClose:true,title:$msg("SHORTCUTS")});
-J.setRequestOptions({onRequest:function(){J.setContent($msg("LOADING"))
-}});
-MooDialog.Request.active=J;
-I.preventDefault()
+}this._registerEvents(H);
+var i=$("#keyboardShortcuts");
+if(i){i.bind("click",function(J){BootstrapDialog.Request.active=new BootstrapDialog.Request("c/keyboard",$msg("SHORTCUTS"),{closeButton:true,cancelButton:true});
+H.onObjectFocusEvent();
+J.preventDefault()
 })
-}var x=$("tutorialVideo");
+}var x=$("#tutorialVideo");
 if(x){var w=900;
 var u=500;
 var g=(screen.width/2)-(w/2);
 var s=(screen.height/2)-(u/2);
-x.addEvent("click",function(I){window.open("http://www.framatube.org/media/tutoriel-video-wisemapping-claire-cassaigne/embed_player","_blank","toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=yes, copyhistory=no, width="+w+", height="+u+", top="+s+", left="+g);
-I.preventDefault()
+x.bind("click",function(J){window.open("https://www.framatube.org/media/tutoriel-video-wisemapping-claire-cassaigne/embed_player","_blank","toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=yes, copyhistory=no, width="+w+", height="+u+", top="+s+", left="+g);
+J.preventDefault()
 })
-}},_registerEvents:function(a){this._toolbarElems.each(function(b){b.addEvent("show",function(){this.clear()
-}.bind(this))
-}.bind(this));
-a.addEvent("onblur",function(){var c=a.getModel().filterSelectedTopics();
-var b=a.getModel().filterSelectedRelationships();
-this._toolbarElems.each(function(f){var e=f.isTopicAction();
-var d=f.isRelAction();
-if(e||d){if((e&&c.length!=0)||(d&&b.length!=0)){f.enable()
-}else{f.disable()
+}},_registerEvents:function(a){var b=this;
+_.each(this._toolbarElems,function(c){c.addEvent("show",function(){b.clear()
+})
+});
+a.addEvent("onblur",function(){var d=a.getModel().filterSelectedTopics();
+var c=a.getModel().filterSelectedRelationships();
+_.each(b._toolbarElems,function(g){var f=g.isTopicAction();
+var e=g.isRelAction();
+if(f||e){if((f&&d.length!=0)||(e&&c.length!=0)){g.enable()
+}else{g.disable()
 }}})
-}.bind(this));
-a.addEvent("onfocus",function(){var c=a.getModel().filterSelectedTopics();
-var b=a.getModel().filterSelectedRelationships();
-this._toolbarElems.each(function(f){var e=f.isTopicAction();
-var d=f.isRelAction();
-if(e||d){if(e&&c.length>0){f.enable()
-}if(d&&b.length>0){f.enable()
+});
+a.addEvent("onfocus",function(){var d=a.getModel().filterSelectedTopics();
+var c=a.getModel().filterSelectedRelationships();
+_.each(b._toolbarElems,function(g){var f=g.isTopicAction();
+var e=g.isRelAction();
+if(f||e){if(f&&d.length>0){g.enable()
+}if(e&&c.length>0){g.enable()
 }}})
-}.bind(this))
-},_addButton:function(f,c,b,e){var a=null;
-if($(f)){var d=new mindplot.widget.ToolbarItem(f,function(g){e(g);
-this.clear()
-}.bind(this),{topicAction:c,relAction:b});
+})
+},_addButton:function(f,c,b,e){var g=this;
+var a=null;
+if($("#"+f)){var d=new mindplot.widget.ToolbarItem(f,function(h){e(h);
+g.clear()
+},{topicAction:c,relAction:b});
 this._toolbarElems.push(d);
 a=d
 }return a
-},_registerTooltip:function(b,d,a){if($(b)){var c=d;
+},_registerTooltip:function(b,d,a){if($("#"+b)){var c=d;
 if(a){a=Browser.Platform.mac?a.replace("meta+","⌘"):a.replace("meta+","ctrl+");
 c=c+" ("+a+")"
-}new mindplot.widget.KeyboardShortcutTooltip($(b),c)
+}new mindplot.widget.KeyboardShortcutTooltip($("#"+b),c)
 }}});mindplot.layout.EventBusDispatcher=new Class({initialize:function(){this.registerBusEvents()
 },setLayoutManager:function(a){this._layoutManager=a
 },registerBusEvents:function(){mindplot.EventBus.instance.addEvent(mindplot.EventBus.events.NodeAdded,this._nodeAdded.bind(this));
@@ -5501,7 +5355,7 @@ this._order=a
 },setPosition:function(a){$assert(a,"value can not be null");
 this._position=a
 },toString:function(){return"[order:"+this.getOrder()+", position: {"+this.getPosition().x+","+this.getPosition().y+"}]"
-}});mindplot.layout.LayoutManager=new Class({Extends:Events,initialize:function(d,b){$assert($defined(d),"rootNodeId can not be null");
+}});mindplot.layout.LayoutManager=new Class({Extends:mindplot.Events,initialize:function(d,b){$assert($defined(d),"rootNodeId can not be null");
 $assert(b,"rootSize can not be null");
 var a=a||{x:0,y:0};
 this._treeSet=new mindplot.layout.RootedTreeSet();
@@ -5557,13 +5411,13 @@ this._treeSet.plot(b);
 return b
 },layout:function(a){this._layout.layout();
 this._collectChanges();
-if(!$(a)||a){this._flushEvents()
+if($(a).length>0||a){this._flushEvents()
 }return this
-},_flushEvents:function(){this._events.each(function(a){this.fireEvent("change",a)
+},_flushEvents:function(){_.each(this._events,function(a){this.fireEvent("change",a)
 },this);
 this._events=[]
 },_collectChanges:function(a){if(!a){a=this._treeSet.getTreeRoots()
-}a.each(function(c){if(c.hasOrderChanged()||c.hasPositionChanged()){var d=c.getId();
+}_.each(a,function(c){if(c.hasOrderChanged()||c.hasPositionChanged()){var d=c.getId();
 var b=this._events.some(function(e){return e.id==d
 });
 if(!b){b=new mindplot.layout.ChangeEvent(d)
@@ -5624,7 +5478,7 @@ var b=this.getPosition();
 if(b==null||Math.abs(b.x-a.x)>2||Math.abs(b.y-a.y)>2){this._setProperty("position",a)
 }},_setProperty:function(a,b){var c=this._properties[a];
 if(!c){c={hasChanged:false,value:null,oldValue:null}
-}if(JSON.encode(c.value)!=JSON.encode(b)){c.oldValue=c.value;
+}if(JSON.stringify(c.value)!=JSON.stringify(b)){c.oldValue=c.value;
 c.value=b;
 c.hasChanged=true
 }this._properties[a]=c
@@ -5746,18 +5600,20 @@ for(var j=0;
 j<c.length;
 j++){var b=c[j];
 this._plot(d,b)
-}},updateBranchPosition:function(e,a){var b=e.getPosition();
-e.setPosition(a);
+}},updateBranchPosition:function(f,a){var b=f.getPosition();
+f.setPosition(a);
 var d=b.x-a.x;
-var f=b.y-a.y;
-var c=this.getChildren(e);
-c.each(function(g){this.shiftBranchPosition(g,d,f)
-}.bind(this))
-},shiftBranchPosition:function(d,c,e){var a=d.getPosition();
-d.setPosition({x:a.x+c,y:a.y+e});
-var b=this.getChildren(d);
-b.each(function(f){this.shiftBranchPosition(f,c,e)
-}.bind(this))
+var g=b.y-a.y;
+var c=this.getChildren(f);
+var e=this;
+_.each(c,function(h){e.shiftBranchPosition(h,d,g)
+})
+},shiftBranchPosition:function(e,c,f){var a=e.getPosition();
+e.setPosition({x:a.x+c,y:a.y+f});
+var b=this.getChildren(e);
+var d=this;
+_.each(b,function(g){d.shiftBranchPosition(g,c,f)
+})
 },getSiblingsInVerticalDirection:function(b,d){var a=this.getParent(b);
 var c=this.getSiblings(b).filter(function(g){var f=b.getPosition().x>a.getPosition().x?g.getPosition().x>a.getPosition().x:g.getPosition().x<a.getPosition().x;
 var e=d<0?g.getOrder()<b.getOrder():g.getOrder()>b.getOrder();
@@ -5791,7 +5647,7 @@ var a;
 var e=g.getChildren(f);
 if(e.length==0||f.areChildrenShrunken()){a=b
 }else{var d=0;
-e.each(function(h){d+=this._computeChildrenHeight(g,h,c)
+_.each(e,function(h){d+=this._computeChildrenHeight(g,h,c)
 },this);
 a=Math.max(b,d)
 }if(c){c[f.getId()]=a
@@ -5828,7 +5684,7 @@ if(d.length==0){return[o,{x:h.getPosition().x+r*(h.getSize().width/2+mindplot.la
 }var j=null;
 var g=d.getLast();
 t=t||{x:g.getPosition().x,y:g.getPosition().y+1};
-d.each(function(w,u){var v=w.getPosition();
+_.each(d,function(w,u){var v=w.getPosition();
 if(t.y>v.y){yOffset=w==g?w.getSize().height+mindplot.layout.BalancedSorter.INTERNODE_VERTICAL_PADDING*2:(d[u+1].getPosition().y-w.getPosition().y)/2;
 j=[w.getOrder()+2,{x:v.x,y:v.y+yOffset}]
 }});
@@ -5849,7 +5705,7 @@ c.setOrder(c.getOrder()+2)
 a.setOrder(f)
 },detach:function(d,c){var b=d.getParent(c);
 var a=this._getChildrenForOrder(b,d,c.getOrder());
-a.each(function(f,e){if(f.getOrder()>c.getOrder()){f.setOrder(f.getOrder()-2)
+_.each(a,function(f,e){if(f.getOrder()>c.getOrder()){f.setOrder(f.getOrder()-2)
 }});
 c.setOrder(c.getOrder()%2==0?0:1)
 },computeOffsets:function(j,c){$assert(j,"treeSet can no be null.");
@@ -5859,7 +5715,7 @@ var k=b.map(function(i){return{id:i.getId(),order:i.getOrder(),width:i.getSize()
 },this).reverse();
 var e=0;
 var a=0;
-k.each(function(i){if(i.order%2==0){e+=i.height
+_.each(k,function(i){if(i.order%2==0){e+=i.height
 }else{a+=i.height
 }});
 var f=e/2;
@@ -5950,7 +5806,7 @@ var b=this._getSortedChildren(g,c);
 var j=b.map(function(i){return{id:i.getId(),order:i.getOrder(),position:i.getPosition(),width:i.getSize().width,height:this._computeChildrenHeight(g,i)}
 },this).reverse();
 var h=0;
-j.each(function(i){h+=i.height
+_.each(j,function(i){h+=i.height
 });
 var l=h/2;
 var m={};
@@ -5987,24 +5843,25 @@ mindplot.layout.SymmetricSorter.INTERNODE_HORIZONTAL_PADDING=30;mindplot.layout.
 $assert(c,"node can no be null.");
 $assert("order can no be null.");
 var b=this._getSortedChildren(k,c);
-var l=b.map(function(i){return{id:i.getId(),height:this._computeChildrenHeight(k,i)}
-}.bind(this));
-var o={};
+var n=this;
+var m=b.map(function(i){return{id:i.getId(),height:n._computeChildrenHeight(k,i)}
+});
+var p={};
 for(var g=0;
-g<l.length;
+g<m.length;
 g++){var f=g%2==0?1:-1;
-var m=g==0?0:l[0].height/2*f;
-var n=0;
+var l=g==0?0:m[0].height/2*f;
+var o=0;
 for(var e=g-2;
 e>0;
-e=e-2){n+=l[e].height*f
-}var a=g==0?0:l[g].height/2*f;
-var d=m+n+a;
+e=e-2){o+=m[e].height*f
+}var a=g==0?0:m[g].height/2*f;
+var d=l+o+a;
 var h=c.getSize().width+mindplot.layout.GridSorter.GRID_HORIZONTAR_SIZE;
 $assert(!isNaN(h),"xOffset can not be null");
 $assert(!isNaN(d),"yOffset can not be null");
-o[l[g].id]={x:h,y:d}
-}return o
+p[m[g].id]={x:h,y:d}
+}return p
 },toString:function(){return"Grid Sorter"
 }});
 mindplot.layout.GridSorter.GRID_HORIZONTAR_SIZE=20;
@@ -6031,39 +5888,40 @@ d.detach(this._treeSet,b);
 this._treeSet.disconnect(c);
 a.getSorter().verify(this._treeSet,a)
 },layout:function(){var a=this._treeSet.getTreeRoots();
-a.each(function(c){var d=c.getSorter();
+_.each(a,function(c){var d=c.getSorter();
 var b=d.computeChildrenIdByHeights(this._treeSet,c);
 this._layoutChildren(c,b);
 this._fixOverlapping(c,b)
 },this)
 },_layoutChildren:function(d,g){var c=d.getId();
 var b=this._treeSet.getChildren(d);
-var j=this._treeSet.getParent(d);
-var h=b.some(function(n){return n.hasOrderChanged()
+var k=this._treeSet.getParent(d);
+var i=b.some(function(o){return o.hasOrderChanged()
 });
-var k=b.some(function(n){return n.hasSizeChanged()
+var l=b.some(function(o){return o.hasSizeChanged()
 });
 var e=g[c];
-var a=$defined(j)?j._heightChanged:false;
+var a=$defined(k)?k._heightChanged:false;
 var f=d._branchHeight!=e;
 d._heightChanged=f||a;
-if(h||k||f||a){var m=d.getSorter();
-var l=m.computeOffsets(this._treeSet,d);
-var i=d.getPosition();
-b.each(function(t){var s=l[t.getId()];
-var n=t.getFreeDisplacement();
-var r=d.getSorter().getChildDirection(this._treeSet,t);
-if((r>0&&n.x<0)||(r<0&&n.x>0)){t.resetFreeDisplacement();
-t.setFreeDisplacement({x:-n.x,y:n.y})
-}s.x+=t.getFreeDisplacement().x;
-s.y+=t.getFreeDisplacement().y;
-var q=i.x;
-var p=i.y;
-var o={x:q+s.x,y:p+s.y+this._calculateAlignOffset(d,t,g)};
-this._treeSet.updateBranchPosition(t,o)
-}.bind(this));
+if(i||l||f||a){var n=d.getSorter();
+var m=n.computeOffsets(this._treeSet,d);
+var j=d.getPosition();
+var h=this;
+_.each(b,function(u){var t=m[u.getId()];
+var o=u.getFreeDisplacement();
+var s=d.getSorter().getChildDirection(h._treeSet,u);
+if((s>0&&o.x<0)||(s<0&&o.x>0)){u.resetFreeDisplacement();
+u.setFreeDisplacement({x:-o.x,y:o.y})
+}t.x+=u.getFreeDisplacement().x;
+t.y+=u.getFreeDisplacement().y;
+var r=j.x;
+var q=j.y;
+var p={x:r+t.x,y:q+t.y+h._calculateAlignOffset(d,u,g)};
+h._treeSet.updateBranchPosition(u,p)
+});
 d._branchHeight=e
-}b.each(function(n){this._layoutChildren(n,g)
+}_.each(b,function(o){this._layoutChildren(o,g)
 },this)
 },_calculateAlignOffset:function(c,f,b){if(f.isFree()){return 0
 }var e=0;
@@ -6079,12 +5937,12 @@ if(this._treeSet.isStartOfSubBranch(f)&&this._branchIsTaller(f,b)){if(this._tree
 },_branchIsTaller:function(b,a){return a[b.getId()]>(b.getSize().height+b.getSorter()._getVerticalPadding()*2)
 },_fixOverlapping:function(c,b){var a=this._treeSet.getChildren(c);
 if(c.isFree()){this._shiftBranches(c,b)
-}a.each(function(d){this._fixOverlapping(d,b)
+}_.each(a,function(d){this._fixOverlapping(d,b)
 },this)
 },_shiftBranches:function(f,d){var a=[f];
 var b=this._treeSet.getSiblingsInVerticalDirection(f,f.getFreeDisplacement().y);
 var e=f;
-b.each(function(h){var g=a.some(function(j){return this._branchesOverlap(j,h,d)
+_.each(b,function(h){var g=a.some(function(j){return this._branchesOverlap(j,h,d)
 },this);
 if(!h.isFree()||g){var i=f.getFreeDisplacement().y;
 this._treeSet.shiftBranchPosition(h,0,i);
@@ -6092,7 +5950,7 @@ a.push(h)
 }},this);
 var c=this._treeSet.getBranchesInVerticalDirection(f,f.getFreeDisplacement().y).filter(function(g){return !a.contains(g)
 });
-c.each(function(h){var g=f.getFreeDisplacement().y;
+_.each(c,function(h){var g=f.getFreeDisplacement().y;
 this._treeSet.shiftBranchPosition(h,0,g);
 a.push(h);
 e=h
@@ -6105,6 +5963,8 @@ var b=f.getPosition().y+d[f.getId()]/2;
 return !(c>=b||e<=a)
 }});
 mindplot.layout.OriginalLayout.SYMMETRIC_SORTER=new mindplot.layout.SymmetricSorter();
-mindplot.layout.OriginalLayout.BALANCED_SORTER=new mindplot.layout.BalancedSorter();mindplot.EventBus=new Class({Implements:Events,initialize:function(){}});
+mindplot.layout.OriginalLayout.BALANCED_SORTER=new mindplot.layout.BalancedSorter();mindplot.EventBus=new Class({Implements:mindplot.Events,initialize:function(){}});
 mindplot.EventBus.events={NodeResizeEvent:"NodeResizeEvent",NodeMoveEvent:"NodeMoveEvent",NodeShrinkEvent:"NodeShrinkEvent",NodeConnectEvent:"NodeConnectEvent",NodeDisconnectEvent:"NodeDisconnectEvent",NodeAdded:"NodeAdded",NodeRemoved:"NodeRemoved",DoLayout:"DoLayout"};
-mindplot.EventBus.instance=new mindplot.EventBus();mindplot.Messages.BUNDLES.en={ZOOM_IN:"Zoom In",ZOOM_OUT:"Zoom Out",TOPIC_SHAPE:"Topic Shape",TOPIC_ADD:"Add Topic",TOPIC_DELETE:"Delete Topic",TOPIC_ICON:"Add Icon",TOPIC_LINK:"Add Link",TOPIC_RELATIONSHIP:"Relationship",TOPIC_COLOR:"Topic Color",TOPIC_BORDER_COLOR:"Topic Border Color",TOPIC_NOTE:"Add Note",FONT_FAMILY:"Font Type",FONT_SIZE:"Text Size",FONT_BOLD:"Text Bold",FONT_ITALIC:"Text Italic",UNDO:"Undo",REDO:"Redo",INSERT:"Insert",SAVE:"Save",NOTE:"Note",ADD_TOPIC:"Add Topic",LOADING:"Loading ...",EXPORT:"Export",PRINT:"Print",PUBLISH:"Publish",COLLABORATE:"Share",HISTORY:"History",DISCARD_CHANGES:"Discard Changes",FONT_COLOR:"Text Color",SAVING:"Saving ...",SAVE_COMPLETE:"Save Complete",ZOOM_IN_ERROR:"Zoom too high.",ZOOM_ERROR:"No more zoom can be applied.",ONLY_ONE_TOPIC_MUST_BE_SELECTED:"Could not create a topic. Only one topic must be selected.",ONE_TOPIC_MUST_BE_SELECTED:"Could not create a topic. One topic must be selected.",ONLY_ONE_TOPIC_MUST_BE_SELECTED_COLLAPSE:"Children can not be collapsed. One topic must be selected.",SAVE_COULD_NOT_BE_COMPLETED:"Save could not be completed, please try again latter.",UNEXPECTED_ERROR_LOADING:"We're sorry, an unexpected error has occurred.\nTry again reloading the editor.If the problem persists, contact us to support@wisemapping.com.",MAIN_TOPIC:"Main Topic",SUB_TOPIC:"Sub Topic",ISOLATED_TOPIC:"Isolated Topic",CENTRAL_TOPIC:"Central Topic",SHORTCUTS:"Keyboard Shortcuts",ENTITIES_COULD_NOT_BE_DELETED:"Could not delete topic or relation. At least one map entity must be selected.",AT_LEAST_ONE_TOPIC_MUST_BE_SELECTED:"At least one topic must be selected.",CLIPBOARD_IS_EMPTY:"Nothing to copy. Clipboard is empty.",CENTRAL_TOPIC_CAN_NOT_BE_DELETED:"Central topic can not be deleted.",RELATIONSHIP_COULD_NOT_BE_CREATED:"Relationship could not be created. A parent relationship topic must be selected first.",SELECTION_COPIED_TO_CLIPBOARD:"Topics copied to the clipboard",WRITE_YOUR_TEXT_HERE:"Write your note here ...",REMOVE:"Remove",ACCEPT:"Accept",CANCEL:"Cancel",LINK:"Link",OPEN_LINK:"Open URL",SESSION_EXPIRED:"Your session has expired, please log-in again.",DUMMY:""};mindplot.Messages.BUNDLES.es={DISCARD_CHANGES:"Descartar Cambios",SAVE:"Guardar",INSERT:"Insertar",ZOOM_IN:"Acercar",ZOOM_OUT:"Alejar",TOPIC_BORDER_COLOR:"Color del Borde",TOPIC_SHAPE:"Forma del Tópico",TOPIC_ADD:"Agregar Tópico",TOPIC_DELETE:"Borrar Tópico",TOPIC_ICON:"Agregar Icono",TOPIC_LINK:"Agregar Enlace",TOPIC_NOTE:"Agregar Nota",TOPIC_COLOR:"Color Tópico",TOPIC_RELATIONSHIP:"Relación",FONT_FAMILY:"Tipo de Fuente",FONT_SIZE:"Tamaño de Texto",FONT_BOLD:"Negrita",FONT_ITALIC:"Italica",FONT_COLOR:"Color de Texto",UNDO:"Rehacer",NOTE:"Nota",LOADING:"Cargando ...",PRINT:"Imprimir",PUBLISH:"Publicar",REDO:"Deshacer",ADD_TOPIC:"Agregar Tópico",COLLABORATE:"Compartir",EXPORT:"Exportar",HISTORY:"History",SAVE_COMPLETE:"Grabado Completo",SAVING:"Grabando ...",ONE_TOPIC_MUST_BE_SELECTED:"No ha sido posible crear un nuevo tópico. Al menos un tópico debe ser seleccionado.",ONLY_ONE_TOPIC_MUST_BE_SELECTED:"No ha sido posible crear un nuevo tópico. Sólo un tópico debe ser seleccionado.",SAVE_COULD_NOT_BE_COMPLETED:"Grabación no pudo ser completada. Intentelo mas tarde.",UNEXPECTED_ERROR_LOADING:"Lo sentimos, un error inesperado ha ocurrido. Intentelo nuevamente recargando el editor. Si el problema persiste, contactenos a support@wisemapping.com.",ZOOM_ERROR:"No es posible aplicar mas zoom.",ZOOM_IN_ERROR:"El zoom es muy alto.",MAIN_TOPIC:"Tópico Principal",SUB_TOPIC:"Tópico Secundario",ISOLATED_TOPIC:"Tópico Aislado",CENTRAL_TOPIC:"Tópico Central",ONLY_ONE_TOPIC_MUST_BE_SELECTED_COLLAPSE:"Tópicos hijos no pueden ser colapsados. Sólo un tópico debe ser seleccionado.",SHORTCUTS:"Accesos directos",ENTITIES_COULD_NOT_BE_DELETED:"El tópico o la relación no pudo ser borrada. Debe selecionar al menos una.",AT_LEAST_ONE_TOPIC_MUST_BE_SELECTED:"Al menos un tópico debe ser seleccionado.",CLIPBOARD_IS_EMPTY:"Nada que copiar. Clipboard está vacio.",CENTRAL_TOPIC_CAN_NOT_BE_DELETED:"El tópico central no puede ser borrado.",RELATIONSHIP_COULD_NOT_BE_CREATED:"La relación no pudo ser creada. Una relación padre debe ser seleccionada primero.",SELECTION_COPIED_TO_CLIPBOARD:"Tópicos copiados al clipboard",WRITE_YOUR_TEXT_HERE:"Escribe tu nota aquí ...",REMOVE:"Borrar",ACCEPT:"Aceptar",CANCEL:"Cancelar",LINK:"Enlace",OPEN_LINK:"Abrir Enlace",SESSION_EXPIRED:"Su session ha expirado. Por favor, ingrese nuevamente.",DUMMY:""};mindplot.Messages.BUNDLES.de={ZOOM_IN:"Ansicht vergrößern",ZOOM_OUT:"Ansicht verkleinern",TOPIC_SHAPE:"Themen Gestaltung",TOPIC_ADD:"Thema hinzufügen",TOPIC_DELETE:"Thema löschen",TOPIC_ICON:"Symbol hinzufügen",TOPIC_LINK:"Verbindung hinzufügen",TOPIC_RELATIONSHIP:"Beziehung",TOPIC_COLOR:"Themenfarbe",TOPIC_BORDER_COLOR:"Thema Randfarbe",TOPIC_NOTE:"Notiz hinzufügen",FONT_FAMILY:"Schrifttyp",FONT_SIZE:"Schriftgröße",FONT_BOLD:"Fette Schrift",FONT_ITALIC:"Kursive Schrift",UNDO:"Rückgängig machen",REDO:"Wiederholen",INSERT:"Einfügen",SAVE:"Sichern",NOTE:"Notiz",ADD_TOPIC:"Thema hinzufügen",LOADING:"Laden ...",EXPORT:"Exportieren",PRINT:"Drucken",PUBLISH:"Publizieren",COLLABORATE:"Mitbenutzen",HISTORY:"Historie",DISCARD_CHANGES:"Änderungen verwerfen",FONT_COLOR:"Textfarbe",SAVING:"Sichern ...",SAVE_COMPLETE:"Sichern abgeschlossen",ZOOM_IN_ERROR:"Zoom zu hoch.",ZOOM_ERROR:"Es kann nicht weiter vergrößert bzw. verkelinert werden.",ONLY_ONE_TOPIC_MUST_BE_SELECTED:"Thema konnte nicht angelegt werden. Bitte wählen Sie nur ein Thema aus.",ONE_TOPIC_MUST_BE_SELECTED:"Thema konnte nicht angelegt werden. Es muss ein Thema ausgewählt werden.",ONLY_ONE_TOPIC_MUST_BE_SELECTED_COLLAPSE:"Kinderknoten können nicht eingefaltet werden. Es muss ein Thema ausgewäht werden.",SAVE_COULD_NOT_BE_COMPLETED:"Sichern wurde nicht abgeschlossen. Versuchen Sie es später nocheinmal.",UNEXPECTED_ERROR_LOADING:"E tut uns Leid, ein unerwarteter Fehler ist aufgetreten.\nVersuchen Sie, den Editor neu zu laden. Falls das Problem erneut auftritt, bitte kontaktieren Sie uns unter support@wisemapping.com.",MAIN_TOPIC:"Hauptthema",SUB_TOPIC:"Unterthema",ISOLATED_TOPIC:"Isoliertes Thema",CENTRAL_TOPIC:"Zentrales Thema",SHORTCUTS:"Tastaturkürzel",ENTITIES_COULD_NOT_BE_DELETED:"Konnte das Thema oder die Beziehung nicht löschen. Es muss mindest ein Eintrag ausgewählt sein.",AT_LEAST_ONE_TOPIC_MUST_BE_SELECTED:"Es muss mindestens ein Thema ausgewählt sein.",CLIPBOARD_IS_EMPTY:"Es gibt nichts zu kopieren. Die Zwischenablage ist leer.",CENTRAL_TOPIC_CAN_NOT_BE_DELETED:"Das zentrale Thema kann nicht gelöscht werden.",RELATIONSHIP_COULD_NOT_BE_CREATED:"Die Beziehung konnte nicht angelegt werden. Es muss erst ein Vater-Thema ausgewählt werden, um die Beziehung herzustellen.",SELECTION_COPIED_TO_CLIPBOARD:"Themen in der Zwischenablage",WRITE_YOUR_TEXT_HERE:"Schreiben Sie ihre Notiz hier ...",REMOVE:"Entfernen",ACCEPT:"Akzeptieren",CANCEL:"Abbrechen",LINK:"Verbindung",OPEN_LINK:"Öffne URL",DUMMY:""};mindplot.Messages.BUNDLES.fr={ZOOM_IN:"Agrandir affichage",ZOOM_OUT:"Réduire affichage",TOPIC_SHAPE:"Forme du noeud",TOPIC_ADD:"Ajouter un noeud",TOPIC_DELETE:"Supprimer le noeud",TOPIC_ICON:"Ajouter une icône",TOPIC_LINK:"Ajouter un lien",TOPIC_RELATIONSHIP:"Relation du noeud",TOPIC_COLOR:"Couleur du noeud",TOPIC_BORDER_COLOR:"Couleur de bordure du noeud",TOPIC_NOTE:"Ajouter une note",FONT_FAMILY:"Type de police",FONT_SIZE:"Taille de police",FONT_BOLD:"Caractères gras",FONT_ITALIC:"Caractères italiques",UNDO:"Annuler",REDO:"Refaire",INSERT:"Insérer",SAVE:"Enregistrer",NOTE:"Note",ADD_TOPIC:"Ajouter un noeud",LOADING:"Chargement ...",EXPORT:"Exporter",PRINT:"Imprimer",PUBLISH:"Publier",COLLABORATE:"Partager",HISTORY:"Historique",DISCARD_CHANGES:"Annuler les changements",FONT_COLOR:"Couleur de police",SAVING:"Enregistrement ...",SAVE_COMPLETE:"Enregistrement terminé",ZOOM_IN_ERROR:"Zoom trop grand.",ZOOM_ERROR:"Impossible de zoomer plus.",ONLY_ONE_TOPIC_MUST_BE_SELECTED:"Impossible de créer un noeud. Un seul noeud doit être sélectionné.",ONE_TOPIC_MUST_BE_SELECTED:"Impossible de créer un noeud. Un noeud parent doit être sélectionné au préalable.",ONLY_ONE_TOPIC_MUST_BE_SELECTED_COLLAPSE:"Un noeud enfant ne peut pas être réduit. Un noeud doit être sélectionné.",SAVE_COULD_NOT_BE_COMPLETED:"Enregistrement impossible. Essayer ultérieurement.",UNEXPECTED_ERROR_LOADING:"Nous sommes désolés, une erreur vient de survenir.\nEssayez de recharger l'éditeur. Si le problème persiste, contactez-nous : support@wisemapping.com.",MAIN_TOPIC:"Noeud titre principal",SUB_TOPIC:"Noeud sous-titre",ISOLATED_TOPIC:"Noeud isolé",CENTRAL_TOPIC:"Noeud racine",SHORTCUTS:"Raccourcis clavier",ENTITIES_COULD_NOT_BE_DELETED:"Impossible d'effacer un noeud ou une relation. Au moins un objet de la carte doit être sélectionné.",AT_LEAST_ONE_TOPIC_MUST_BE_SELECTED:"Au moins un objet de la carte doit être sélectionné.",CLIPBOARD_IS_EMPTY:"Rien à copier. Presse-papier vide.",CENTRAL_TOPIC_CAN_NOT_BE_DELETED:"Le noeud racine ne peut pas être effacé.",RELATIONSHIP_COULD_NOT_BE_CREATED:"Impossible de créer relation. Un noeud parent doit être sélectionné au préalable.",SELECTION_COPIED_TO_CLIPBOARD:"Noeuds sélectionnés copiés dans le presse-papiers.",ACCEPT:"Accepter",CANCEL:"Annuler",REMOVE:"Supprimer",WRITE_YOUR_TEXT_HERE:"Écrivez votre texte ici ...",LINK:"Lien",DUMMY:""};mindplot.Messages.BUNDLES.pt_br={ZOOM_IN:"Ampliar",ZOOM_OUT:"Reduzir",TOPIC_SHAPE:"Forma do T\u00f3pico",TOPIC_ADD:"Adicionar T\u00f3pico",TOPIC_DELETE:"Deletar T\u00f3pico",TOPIC_ICON:"Adicionar \u00cdcone",TOPIC_LINK:"Adicionar Link",TOPIC_RELATIONSHIP:"Relacionamento",TOPIC_COLOR:"Cor do T\u00f3pico",TOPIC_BORDER_COLOR:"Cor da Borda do T\u00f3pico",TOPIC_NOTE:"Adicionar Nota",FONT_FAMILY:"Tipo de Fonte",FONT_SIZE:"Tamanho da Fonte",FONT_BOLD:"Fonte Negrito",FONT_ITALIC:"Fonte It\u00e1lico",UNDO:"Desfazer",REDO:"Refazer",INSERT:"Inserir",SAVE:"Salvar",NOTE:"Nota",ADD_TOPIC:"Adicionar T\u00f3pico",LOADING:"Carregando ...",EXPORT:"Exportar",PRINT:"Imprimir",PUBLISH:"Publicar",COLLABORATE:"Colaborar",HISTORY:"Hist\u00f3ria",DISCARD_CHANGES:"Descartar Altera\u00e7\u00f5es",FONT_COLOR:"Cor da Fonte",SAVING:"Salvando ...",SAVE_COMPLETE:"Salvamento Completo",ZOOM_IN_ERROR:"Zoom excessivo.",ZOOM_ERROR:"N\u00e3o \u00e9 poss\u00edvel aplicar mais zoom.",ONLY_ONE_TOPIC_MUST_BE_SELECTED:"N\u00e3o foi poss\u00edvel criar t\u00f3pico. Apenas um t\u00f3pico deve ser selecionado.",ONE_TOPIC_MUST_BE_SELECTED:"N\u00e3o foi poss\u00edvel criar t\u00f3pico. Um t\u00f3pico deve ser selecionado.",SAVE_COULD_NOT_BE_COMPLETED:"Salvamento n\u00e3o pode ser completado. Tente novamente mais tarde.",UNEXPECTED_ERROR_LOADING:"Ocorreu um erro inesperado.\nTente recarregar novamente o editor. Se o problema persistir, contacte-nos em support@wisemapping.com.",MAIN_TOPIC:"T\u00f3pico Principal",SUB_TOPIC:"Sub T\u00f3pico",ISOLATED_TOPIC:"T\u00f3pico Isolado",CENTRAL_TOPIC:"T\u00f3pico Central",SHORTCUTS:"Atalho",ENTITIES_COULD_NOT_BE_DELETED:"O tópico ou a relação não pode ser apagado. Seleccionar pelo menos um.",AT_LEAST_ONE_TOPIC_MUST_BE_SELECTED:"Pelo menos um tópico deve ser selecionado",CLIPBOARD_IS_EMPTY:"Nada para copiar. Clipboard está vazio.",CENTRAL_TOPIC_CAN_NOT_BE_DELETED:"O tópico central não pode ser apagado.",RELATIONSHIP_COULD_NOT_BE_CREATED:"A relação não pode ser criada. Uma relação pai deve ser selecionada primeiro.",SELECTION_COPIED_TO_CLIPBOARD:"Tópicos copiados ao clipboard.",ONLY_ONE_TOPIC_MUST_BE_SELECTED_COLLAPSE:"Tópicos filhos não podem ser colapsados. Só um tópico deve ser selecionado.",DUMMY:""};mindplot.Messages.BUNDLES.zh_cn={ZOOM_IN:"放大",ZOOM_OUT:"缩小",TOPIC_SHAPE:"节点外形",TOPIC_ADD:"添加节点",TOPIC_DELETE:"删除节点",TOPIC_ICON:"加入图标",TOPIC_LINK:"添加链接",TOPIC_RELATIONSHIP:"关系",TOPIC_COLOR:"节点颜色",TOPIC_BORDER_COLOR:"边框颜色",TOPIC_NOTE:"添加注释",FONT_FAMILY:"字体",FONT_SIZE:"文字大小",FONT_BOLD:"粗体",FONT_ITALIC:"斜体",UNDO:"撤销",REDO:"重做",INSERT:"插入",SAVE:"保存",NOTE:"注释",ADD_TOPIC:"添加节点",LOADING:"载入中……",EXPORT:"导出",PRINT:"打印",PUBLISH:"公开",COLLABORATE:"共享",HISTORY:"历史",DISCARD_CHANGES:"清除改变",FONT_COLOR:"文本颜色",SAVING:"保存中……",SAVE_COMPLETE:"完成保存",ZOOM_IN_ERROR:"缩放过多。",ZOOM_ERROR:"不能再缩放。",ONLY_ONE_TOPIC_MUST_BE_SELECTED:"不能创建节点。仅能选择一个节点。",ONE_TOPIC_MUST_BE_SELECTED:"不能创建节点。必须选择一个节点。",ONLY_ONE_TOPIC_MUST_BE_SELECTED_COLLAPSE:"子节点不能折叠。必须选择一个节点。",SAVE_COULD_NOT_BE_COMPLETED:"保存未完成。稍后再试。",UNEXPECTED_ERROR_LOADING:"抱歉，突遭错误，我们无法处理你的请求。\n尝试重新装载编辑器。如果问题依然存在请联系support@wisemapping.com。",MAIN_TOPIC:"主节点",SUB_TOPIC:"子节点",ISOLATED_TOPIC:"独立节点",CENTRAL_TOPIC:"中心节点",SHORTCUTS:"快捷键",ENTITIES_COULD_NOT_BE_DELETED:"不能删除节点或者关系。至少应选择一个对象。",AT_LEAST_ONE_TOPIC_MUST_BE_SELECTED:"至少应选择一个节点。",CLIPBOARD_IS_EMPTY:"无法拷贝。 粘贴板是空的。",CENTRAL_TOPIC_CAN_NOT_BE_DELETED:"不能删除根节点。",RELATIONSHIP_COULD_NOT_BE_CREATED:"不能创建关系。 应先选择创建关系的一对上级节点。",SELECTION_COPIED_TO_CLIPBOARD:"节点已拷贝到粘贴板。",DUMMY:""};mindplot.Messages.BUNDLES.zh_tw={ZOOM_IN:"放大",ZOOM_OUT:"縮小",TOPIC_SHAPE:"節點外形",TOPIC_ADD:"添加節點",TOPIC_DELETE:"刪除節點",TOPIC_ICON:"加入圖示",TOPIC_LINK:"添加鏈接",TOPIC_RELATIONSHIP:"關係",TOPIC_COLOR:"節點顏色",TOPIC_BORDER_COLOR:"邊框顏色",TOPIC_NOTE:"添加注釋",FONT_FAMILY:"字體",FONT_SIZE:"文字大小",FONT_BOLD:"粗體",FONT_ITALIC:"斜體",UNDO:"撤銷",REDO:"重做",INSERT:"插入",SAVE:"保存",NOTE:"注釋",ADD_TOPIC:"添加節點",LOADING:"載入中……",EXPORT:"導出",PRINT:"列印",PUBLISH:"公開",COLLABORATE:"共用",HISTORY:"歷史",DISCARD_CHANGES:"清除改變",FONT_COLOR:"文本顏色",SAVING:"保存中……",SAVE_COMPLETE:"完成保存",ZOOM_IN_ERROR:"縮放過多。",ZOOM_ERROR:"不能再縮放。",ONLY_ONE_TOPIC_MUST_BE_SELECTED:"不能創建節點。僅能選擇一個節點。",ONE_TOPIC_MUST_BE_SELECTED:"不能創建節點。必須選擇一個節點。",ONLY_ONE_TOPIC_MUST_BE_SELECTED_COLLAPSE:"子節點不能折疊。必須選擇一個節點。",SAVE_COULD_NOT_BE_COMPLETED:"保存未完成。稍後再試。",UNEXPECTED_ERROR_LOADING:"抱歉，突遭錯誤，我們無法處理你的請求。\n嘗試重新裝載編輯器。如果問題依然存在請聯繫support@wisemapping.com。",MAIN_TOPIC:"主節點",SUB_TOPIC:"子節點",ISOLATED_TOPIC:"獨立節點",CENTRAL_TOPIC:"中心節點",SHORTCUTS:"快捷鍵",ENTITIES_COULD_NOT_BE_DELETED:"不能刪除節點或者關係。至少應選擇一個對象。",AT_LEAST_ONE_TOPIC_MUST_BE_SELECTED:"至少應選擇一個節點。",CLIPBOARD_IS_EMPTY:"無法拷貝。 粘貼板是空的。",CENTRAL_TOPIC_CAN_NOT_BE_DELETED:"不能刪除根節點。",RELATIONSHIP_COULD_NOT_BE_CREATED:"不能創建關係。 應先選擇創建關係的一對上級節點。",SELECTION_COPIED_TO_CLIPBOARD:"節點已拷貝到粘貼板。",DUMMY:""};mindplot.Messages.BUNDLES.ca={DISCARD_CHANGES:"Descartar els canvis",SAVE:"Desar",INSERT:"Inserir",ZOOM_IN:"Apropar",ZOOM_OUT:"Allunyar",TOPIC_BORDER_COLOR:"Color del bord",TOPIC_SHAPE:"Forma del Tòpic",TOPIC_ADD:"Afegir Tòpic",TOPIC_DELETE:"Esborrar Tòpic",TOPIC_ICON:"Afegir Icona",TOPIC_LINK:"Afegir Enllaç",TOPIC_NOTE:"Afegir Nota",TOPIC_COLOR:"Color del Tòpic",TOPIC_RELATIONSHIP:"Relació",FONT_FAMILY:"Tipus de font",FONT_SIZE:"Mida del text",FONT_BOLD:"Negreta",FONT_ITALIC:"Itàlica",FONT_COLOR:"Color del Text",UNDO:"Refer",NOTE:"Nota",LOADING:"Carregant ...",PRINT:"Imprimir",PUBLISH:"Publicar",REDO:"Desfer",ADD_TOPIC:"Afegir Tòpic",COLLABORATE:"Compartir",EXPORT:"Exportar",HISTORY:"Història",SAVE_COMPLETE:"Desat completat",SAVING:"Gravant ...",ONE_TOPIC_MUST_BE_SELECTED:"No ha estat possible crear un nou tòpic. Com a mínim ha de seleccionar un tòpic.",ONLY_ONE_TOPIC_MUST_BE_SELECTED:"No ha estar possible crear un nou tòpic. Només un tòpic ha d'estar seleccionat.",SAVE_COULD_NOT_BE_COMPLETED:"No s'ha pogut desar. Provi més tard.",UNEXPECTED_ERROR_LOADING:"Ho sentim, un error ha esdevingut inesperadament. Provi recarregant l'editor, si el problema continua contacti a support@wisemapping.com.",ZOOM_ERROR:"No es pot fer més zoom.",ZOOM_IN_ERROR:"El zoom és massa creixent.",MAIN_TOPIC:"Tòpic principal",SUB_TOPIC:"Tòpic secundari",ISOLATED_TOPIC:"Tòpic aïllat",CENTRAL_TOPIC:"Tòpic central",ONLY_ONE_TOPIC_MUST_BE_SELECTED_COLLAPSE:"Els tòpics fills no es poden col·lapsar. Només un tòpic ha d'estar seleccionat.",SHORTCUTS:"Accessos directes",ENTITIES_COULD_NOT_BE_DELETED:"El tòpic o la relució no poden ser esborrats. Com a mínim ha de seleccionar un.",AT_LEAST_ONE_TOPIC_MUST_BE_SELECTED:"Com a mínim ha de seleccionar un tòpic.",CLIPBOARD_IS_EMPTY:"Res a copiar.",CENTRAL_TOPIC_CAN_NOT_BE_DELETED:"El tòpic central no pot esborrar-se.",RELATIONSHIP_COULD_NOT_BE_CREATED:"La relució no s'ha pout drear. Primer has de seleccionar una relució pare.",SELECTION_COPIED_TO_CLIPBOARD:"Tòpics copiats",WRITE_YOUR_TEXT_HERE:"Escriu aquí la teva nota ...",REMOVE:"Esborrar",ACCEPT:"Acceptar",CANCEL:"Cancel·lar",LINK:"Enllaç",OPEN_LINK:"Obrir Enllaç",SESSION_EXPIRED:"La seva sessió ha finalitzat. Si us plau, torni a connectar-se.",DUMMY:""};$(document).fireEvent("loadcomplete","mind");
+mindplot.EventBus.instance=new mindplot.EventBus();mindplot.Messages.BUNDLES.en={ZOOM_IN:"Zoom In",ZOOM_OUT:"Zoom Out",TOPIC_SHAPE:"Topic Shape",TOPIC_ADD:"Add Topic",TOPIC_DELETE:"Delete Topic",TOPIC_ICON:"Add Icon",TOPIC_LINK:"Add Link",TOPIC_RELATIONSHIP:"Relationship",TOPIC_COLOR:"Topic Color",TOPIC_BORDER_COLOR:"Topic Border Color",TOPIC_NOTE:"Add Note",FONT_FAMILY:"Font Type",FONT_SIZE:"Text Size",FONT_BOLD:"Text Bold",FONT_ITALIC:"Text Italic",UNDO:"Undo",REDO:"Redo",INSERT:"Insert",SAVE:"Save",NOTE:"Note",ADD_TOPIC:"Add Topic",LOADING:"Loading ...",EXPORT:"Export",PRINT:"Print",PUBLISH:"Publish",COLLABORATE:"Share",HISTORY:"History",DISCARD_CHANGES:"Discard Changes",FONT_COLOR:"Text Color",SAVING:"Saving ...",SAVE_COMPLETE:"Save Complete",ZOOM_IN_ERROR:"Zoom too high.",ZOOM_ERROR:"No more zoom can be applied.",ONLY_ONE_TOPIC_MUST_BE_SELECTED:"Could not create a topic. Only one topic must be selected.",ONE_TOPIC_MUST_BE_SELECTED:"Could not create a topic. One topic must be selected.",ONLY_ONE_TOPIC_MUST_BE_SELECTED_COLLAPSE:"Children can not be collapsed. One topic must be selected.",SAVE_COULD_NOT_BE_COMPLETED:"Save could not be completed, please try again latter.",UNEXPECTED_ERROR_LOADING:"We're sorry, an unexpected error has occurred.\nTry again reloading the editor.If the problem persists, contact us to support@wisemapping.com.",MAIN_TOPIC:"Main Topic",SUB_TOPIC:"Sub Topic",ISOLATED_TOPIC:"Isolated Topic",CENTRAL_TOPIC:"Central Topic",SHORTCUTS:"Keyboard Shortcuts",ENTITIES_COULD_NOT_BE_DELETED:"Could not delete topic or relation. At least one map entity must be selected.",AT_LEAST_ONE_TOPIC_MUST_BE_SELECTED:"At least one topic must be selected.",CLIPBOARD_IS_EMPTY:"Nothing to copy. Clipboard is empty.",CENTRAL_TOPIC_CAN_NOT_BE_DELETED:"Central topic can not be deleted.",RELATIONSHIP_COULD_NOT_BE_CREATED:"Relationship could not be created. A parent relationship topic must be selected first.",SELECTION_COPIED_TO_CLIPBOARD:"Topics copied to the clipboard",WRITE_YOUR_TEXT_HERE:"Write your note here ...",REMOVE:"Remove",ACCEPT:"Accept",CANCEL:"Cancel",LINK:"Link",OPEN_LINK:"Open URL",SESSION_EXPIRED:"Your session has expired, please log-in again.",URL_ERROR:"URL not valid",DUMMY:""};mindplot.Messages.BUNDLES.es={DISCARD_CHANGES:"Descartar Cambios",SAVE:"Guardar",INSERT:"Insertar",ZOOM_IN:"Acercar",ZOOM_OUT:"Alejar",TOPIC_BORDER_COLOR:"Color del Borde",TOPIC_SHAPE:"Forma del Tópico",TOPIC_ADD:"Agregar Tópico",TOPIC_DELETE:"Borrar Tópico",TOPIC_ICON:"Agregar Icono",TOPIC_LINK:"Agregar Enlace",TOPIC_NOTE:"Agregar Nota",TOPIC_COLOR:"Color Tópico",TOPIC_RELATIONSHIP:"Relación",FONT_FAMILY:"Tipo de Fuente",FONT_SIZE:"Tamaño de Texto",FONT_BOLD:"Negrita",FONT_ITALIC:"Italica",FONT_COLOR:"Color de Texto",UNDO:"Rehacer",NOTE:"Nota",LOADING:"Cargando ...",PRINT:"Imprimir",PUBLISH:"Publicar",REDO:"Deshacer",ADD_TOPIC:"Agregar Tópico",COLLABORATE:"Compartir",EXPORT:"Exportar",HISTORY:"Historial",SAVE_COMPLETE:"Grabado Completo",SAVING:"Grabando ...",ONE_TOPIC_MUST_BE_SELECTED:"No ha sido posible crear un nuevo tópico. Al menos un tópico debe ser seleccionado.",ONLY_ONE_TOPIC_MUST_BE_SELECTED:"No ha sido posible crear un nuevo tópico. Sólo un tópico debe ser seleccionado.",SAVE_COULD_NOT_BE_COMPLETED:"Grabación no pudo ser completada. Intentelo mas tarde.",UNEXPECTED_ERROR_LOADING:"Lo sentimos, un error inesperado ha ocurrido. Intentelo nuevamente recargando el editor. Si el problema persiste, contactenos a support@wisemapping.com.",ZOOM_ERROR:"No es posible aplicar mas zoom.",ZOOM_IN_ERROR:"El zoom es muy alto.",MAIN_TOPIC:"Tópico Principal",SUB_TOPIC:"Tópico Secundario",ISOLATED_TOPIC:"Tópico Aislado",CENTRAL_TOPIC:"Tópico Central",ONLY_ONE_TOPIC_MUST_BE_SELECTED_COLLAPSE:"Tópicos hijos no pueden ser colapsados. Sólo un tópico debe ser seleccionado.",SHORTCUTS:"Accesos directos",ENTITIES_COULD_NOT_BE_DELETED:"El tópico o la relación no pudo ser borrada. Debe selecionar al menos una.",AT_LEAST_ONE_TOPIC_MUST_BE_SELECTED:"Al menos un tópico debe ser seleccionado.",CLIPBOARD_IS_EMPTY:"Nada que copiar. Clipboard está vacio.",CENTRAL_TOPIC_CAN_NOT_BE_DELETED:"El tópico central no puede ser borrado.",RELATIONSHIP_COULD_NOT_BE_CREATED:"La relación no pudo ser creada. Una relación padre debe ser seleccionada primero.",SELECTION_COPIED_TO_CLIPBOARD:"Tópicos copiados al clipboard",WRITE_YOUR_TEXT_HERE:"Escribe tu nota aquí ...",REMOVE:"Borrar",ACCEPT:"Aceptar",CANCEL:"Cancelar",LINK:"Enlace",OPEN_LINK:"Abrir Enlace",SESSION_EXPIRED:"Su session ha expirado. Por favor, ingrese nuevamente.",DUMMY:""};mindplot.Messages.BUNDLES.de={ZOOM_IN:"Ansicht vergrößern",ZOOM_OUT:"Ansicht verkleinern",TOPIC_SHAPE:"Themen Gestaltung",TOPIC_ADD:"Thema hinzufügen",TOPIC_DELETE:"Thema löschen",TOPIC_ICON:"Symbol hinzufügen",TOPIC_LINK:"Verbindung hinzufügen",TOPIC_RELATIONSHIP:"Beziehung",TOPIC_COLOR:"Themenfarbe",TOPIC_BORDER_COLOR:"Thema Randfarbe",TOPIC_NOTE:"Notiz hinzufügen",FONT_FAMILY:"Schrifttyp",FONT_SIZE:"Schriftgröße",FONT_BOLD:"Fette Schrift",FONT_ITALIC:"Kursive Schrift",UNDO:"Rückgängig machen",REDO:"Wiederholen",INSERT:"Einfügen",SAVE:"Sichern",NOTE:"Notiz",ADD_TOPIC:"Thema hinzufügen",LOADING:"Laden ...",EXPORT:"Exportieren",PRINT:"Drucken",PUBLISH:"Publizieren",COLLABORATE:"Mitbenutzen",HISTORY:"Historie",DISCARD_CHANGES:"Änderungen verwerfen",FONT_COLOR:"Textfarbe",SAVING:"Sichern ...",SAVE_COMPLETE:"Sichern abgeschlossen",ZOOM_IN_ERROR:"Zoom zu hoch.",ZOOM_ERROR:"Es kann nicht weiter vergrößert bzw. verkelinert werden.",ONLY_ONE_TOPIC_MUST_BE_SELECTED:"Thema konnte nicht angelegt werden. Bitte wählen Sie nur ein Thema aus.",ONE_TOPIC_MUST_BE_SELECTED:"Thema konnte nicht angelegt werden. Es muss ein Thema ausgewählt werden.",ONLY_ONE_TOPIC_MUST_BE_SELECTED_COLLAPSE:"Kinderknoten können nicht eingefaltet werden. Es muss ein Thema ausgewäht werden.",SAVE_COULD_NOT_BE_COMPLETED:"Sichern wurde nicht abgeschlossen. Versuchen Sie es später nocheinmal.",UNEXPECTED_ERROR_LOADING:"E tut uns Leid, ein unerwarteter Fehler ist aufgetreten.\nVersuchen Sie, den Editor neu zu laden. Falls das Problem erneut auftritt, bitte kontaktieren Sie uns unter support@wisemapping.com.",MAIN_TOPIC:"Hauptthema",SUB_TOPIC:"Unterthema",ISOLATED_TOPIC:"Isoliertes Thema",CENTRAL_TOPIC:"Zentrales Thema",SHORTCUTS:"Tastaturkürzel",ENTITIES_COULD_NOT_BE_DELETED:"Konnte das Thema oder die Beziehung nicht löschen. Es muss mindest ein Eintrag ausgewählt sein.",AT_LEAST_ONE_TOPIC_MUST_BE_SELECTED:"Es muss mindestens ein Thema ausgewählt sein.",CLIPBOARD_IS_EMPTY:"Es gibt nichts zu kopieren. Die Zwischenablage ist leer.",CENTRAL_TOPIC_CAN_NOT_BE_DELETED:"Das zentrale Thema kann nicht gelöscht werden.",RELATIONSHIP_COULD_NOT_BE_CREATED:"Die Beziehung konnte nicht angelegt werden. Es muss erst ein Vater-Thema ausgewählt werden, um die Beziehung herzustellen.",SELECTION_COPIED_TO_CLIPBOARD:"Themen in der Zwischenablage",WRITE_YOUR_TEXT_HERE:"Schreiben Sie ihre Notiz hier ...",REMOVE:"Entfernen",ACCEPT:"Akzeptieren",CANCEL:"Abbrechen",LINK:"Verbindung",OPEN_LINK:"Öffne URL",DUMMY:""};mindplot.Messages.BUNDLES.fr={ZOOM_IN:"Agrandir affichage",ZOOM_OUT:"Réduire affichage",TOPIC_SHAPE:"Forme du noeud",TOPIC_ADD:"Ajouter un noeud",TOPIC_DELETE:"Supprimer le noeud",TOPIC_ICON:"Ajouter une icône",TOPIC_LINK:"Ajouter un lien",TOPIC_RELATIONSHIP:"Relation du noeud",TOPIC_COLOR:"Couleur du noeud",TOPIC_BORDER_COLOR:"Couleur de bordure du noeud",TOPIC_NOTE:"Ajouter une note",FONT_FAMILY:"Type de police",FONT_SIZE:"Taille de police",FONT_BOLD:"Caractères gras",FONT_ITALIC:"Caractères italiques",UNDO:"Annuler",REDO:"Refaire",INSERT:"Insérer",SAVE:"Enregistrer",NOTE:"Note",ADD_TOPIC:"Ajouter un noeud",LOADING:"Chargement ...",EXPORT:"Exporter",PRINT:"Imprimer",PUBLISH:"Publier",COLLABORATE:"Partager",HISTORY:"Historique",DISCARD_CHANGES:"Annuler les changements",FONT_COLOR:"Couleur de police",SAVING:"Enregistrement ...",SAVE_COMPLETE:"Enregistrement terminé",ZOOM_IN_ERROR:"Zoom trop grand.",ZOOM_ERROR:"Impossible de zoomer plus.",ONLY_ONE_TOPIC_MUST_BE_SELECTED:"Impossible de créer un noeud. Un seul noeud doit être sélectionné.",ONE_TOPIC_MUST_BE_SELECTED:"Impossible de créer un noeud. Un noeud parent doit être sélectionné au préalable.",ONLY_ONE_TOPIC_MUST_BE_SELECTED_COLLAPSE:"Un noeud enfant ne peut pas être réduit. Un noeud doit être sélectionné.",SAVE_COULD_NOT_BE_COMPLETED:"Enregistrement impossible. Essayer ultérieurement.",UNEXPECTED_ERROR_LOADING:"Nous sommes désolés, une erreur vient de survenir.\nEssayez de recharger l'éditeur. Si le problème persiste, contactez-nous : support@wisemapping.com.",MAIN_TOPIC:"Noeud titre principal",SUB_TOPIC:"Noeud sous-titre",ISOLATED_TOPIC:"Noeud isolé",CENTRAL_TOPIC:"Noeud racine",SHORTCUTS:"Raccourcis clavier",ENTITIES_COULD_NOT_BE_DELETED:"Impossible d'effacer un noeud ou une relation. Au moins un objet de la carte doit être sélectionné.",AT_LEAST_ONE_TOPIC_MUST_BE_SELECTED:"Au moins un objet de la carte doit être sélectionné.",CLIPBOARD_IS_EMPTY:"Rien à copier. Presse-papier vide.",CENTRAL_TOPIC_CAN_NOT_BE_DELETED:"Le noeud racine ne peut pas être effacé.",RELATIONSHIP_COULD_NOT_BE_CREATED:"Impossible de créer relation. Un noeud parent doit être sélectionné au préalable.",SELECTION_COPIED_TO_CLIPBOARD:"Noeuds sélectionnés copiés dans le presse-papiers.",ACCEPT:"Accepter",CANCEL:"Annuler",REMOVE:"Supprimer",WRITE_YOUR_TEXT_HERE:"Écrivez votre texte ici ...",LINK:"Lien",DUMMY:""};mindplot.Messages.BUNDLES.pt_br={ZOOM_IN:"Ampliar",ZOOM_OUT:"Reduzir",TOPIC_SHAPE:"Forma do T\u00f3pico",TOPIC_ADD:"Adicionar T\u00f3pico",TOPIC_DELETE:"Deletar T\u00f3pico",TOPIC_ICON:"Adicionar \u00cdcone",TOPIC_LINK:"Adicionar Link",TOPIC_RELATIONSHIP:"Relacionamento",TOPIC_COLOR:"Cor do T\u00f3pico",TOPIC_BORDER_COLOR:"Cor da Borda do T\u00f3pico",TOPIC_NOTE:"Adicionar Nota",FONT_FAMILY:"Tipo de Fonte",FONT_SIZE:"Tamanho da Fonte",FONT_BOLD:"Fonte Negrito",FONT_ITALIC:"Fonte It\u00e1lico",UNDO:"Desfazer",REDO:"Refazer",INSERT:"Inserir",SAVE:"Salvar",NOTE:"Nota",ADD_TOPIC:"Adicionar T\u00f3pico",LOADING:"Carregando ...",EXPORT:"Exportar",PRINT:"Imprimir",PUBLISH:"Publicar",COLLABORATE:"Colaborar",HISTORY:"Hist\u00f3ria",DISCARD_CHANGES:"Descartar Altera\u00e7\u00f5es",FONT_COLOR:"Cor da Fonte",SAVING:"Salvando ...",SAVE_COMPLETE:"Salvamento Completo",ZOOM_IN_ERROR:"Zoom excessivo.",ZOOM_ERROR:"N\u00e3o \u00e9 poss\u00edvel aplicar mais zoom.",ONLY_ONE_TOPIC_MUST_BE_SELECTED:"N\u00e3o foi poss\u00edvel criar t\u00f3pico. Apenas um t\u00f3pico deve ser selecionado.",ONE_TOPIC_MUST_BE_SELECTED:"N\u00e3o foi poss\u00edvel criar t\u00f3pico. Um t\u00f3pico deve ser selecionado.",SAVE_COULD_NOT_BE_COMPLETED:"Salvamento n\u00e3o pode ser completado. Tente novamente mais tarde.",UNEXPECTED_ERROR_LOADING:"Ocorreu um erro inesperado.\nTente recarregar novamente o editor. Se o problema persistir, contacte-nos em support@wisemapping.com.",MAIN_TOPIC:"T\u00f3pico Principal",SUB_TOPIC:"Sub T\u00f3pico",ISOLATED_TOPIC:"T\u00f3pico Isolado",CENTRAL_TOPIC:"T\u00f3pico Central",SHORTCUTS:"Atalho",ENTITIES_COULD_NOT_BE_DELETED:"O tópico ou a relação não pode ser apagado. Seleccionar pelo menos um.",AT_LEAST_ONE_TOPIC_MUST_BE_SELECTED:"Pelo menos um tópico deve ser selecionado",CLIPBOARD_IS_EMPTY:"Nada para copiar. Clipboard está vazio.",CENTRAL_TOPIC_CAN_NOT_BE_DELETED:"O tópico central não pode ser apagado.",RELATIONSHIP_COULD_NOT_BE_CREATED:"A relação não pode ser criada. Uma relação pai deve ser selecionada primeiro.",SELECTION_COPIED_TO_CLIPBOARD:"Tópicos copiados ao clipboard.",ONLY_ONE_TOPIC_MUST_BE_SELECTED_COLLAPSE:"Tópicos filhos não podem ser colapsados. Só um tópico deve ser selecionado.",DUMMY:""};mindplot.Messages.BUNDLES.zh_cn={ZOOM_IN:"放大",ZOOM_OUT:"缩小",TOPIC_SHAPE:"节点外形",TOPIC_ADD:"添加节点",TOPIC_DELETE:"删除节点",TOPIC_ICON:"加入图标",TOPIC_LINK:"添加链接",TOPIC_RELATIONSHIP:"关系",TOPIC_COLOR:"节点颜色",TOPIC_BORDER_COLOR:"边框颜色",TOPIC_NOTE:"添加注释",FONT_FAMILY:"字体",FONT_SIZE:"文字大小",FONT_BOLD:"粗体",FONT_ITALIC:"斜体",UNDO:"撤销",REDO:"重做",INSERT:"插入",SAVE:"保存",NOTE:"注释",ADD_TOPIC:"添加节点",LOADING:"载入中……",EXPORT:"导出",PRINT:"打印",PUBLISH:"公开",COLLABORATE:"共享",HISTORY:"历史",DISCARD_CHANGES:"清除改变",FONT_COLOR:"文本颜色",SAVING:"保存中……",SAVE_COMPLETE:"完成保存",ZOOM_IN_ERROR:"缩放过多。",ZOOM_ERROR:"不能再缩放。",ONLY_ONE_TOPIC_MUST_BE_SELECTED:"不能创建节点。仅能选择一个节点。",ONE_TOPIC_MUST_BE_SELECTED:"不能创建节点。必须选择一个节点。",ONLY_ONE_TOPIC_MUST_BE_SELECTED_COLLAPSE:"子节点不能折叠。必须选择一个节点。",SAVE_COULD_NOT_BE_COMPLETED:"保存未完成。稍后再试。",UNEXPECTED_ERROR_LOADING:"抱歉，突遭错误，我们无法处理你的请求。\n尝试重新装载编辑器。如果问题依然存在请联系support@wisemapping.com。",MAIN_TOPIC:"主节点",SUB_TOPIC:"子节点",ISOLATED_TOPIC:"独立节点",CENTRAL_TOPIC:"中心节点",SHORTCUTS:"快捷键",ENTITIES_COULD_NOT_BE_DELETED:"不能删除节点或者关系。至少应选择一个对象。",AT_LEAST_ONE_TOPIC_MUST_BE_SELECTED:"至少应选择一个节点。",CLIPBOARD_IS_EMPTY:"无法拷贝。 粘贴板是空的。",CENTRAL_TOPIC_CAN_NOT_BE_DELETED:"不能删除根节点。",RELATIONSHIP_COULD_NOT_BE_CREATED:"不能创建关系。 应先选择创建关系的一对上级节点。",SELECTION_COPIED_TO_CLIPBOARD:"节点已拷贝到粘贴板。",DUMMY:""};mindplot.Messages.BUNDLES.zh_tw={ZOOM_IN:"放大",ZOOM_OUT:"縮小",TOPIC_SHAPE:"節點外形",TOPIC_ADD:"添加節點",TOPIC_DELETE:"刪除節點",TOPIC_ICON:"加入圖示",TOPIC_LINK:"添加鏈接",TOPIC_RELATIONSHIP:"關係",TOPIC_COLOR:"節點顏色",TOPIC_BORDER_COLOR:"邊框顏色",TOPIC_NOTE:"添加注釋",FONT_FAMILY:"字體",FONT_SIZE:"文字大小",FONT_BOLD:"粗體",FONT_ITALIC:"斜體",UNDO:"撤銷",REDO:"重做",INSERT:"插入",SAVE:"保存",NOTE:"注釋",ADD_TOPIC:"添加節點",LOADING:"載入中……",EXPORT:"導出",PRINT:"列印",PUBLISH:"公開",COLLABORATE:"共用",HISTORY:"歷史",DISCARD_CHANGES:"清除改變",FONT_COLOR:"文本顏色",SAVING:"保存中……",SAVE_COMPLETE:"完成保存",ZOOM_IN_ERROR:"縮放過多。",ZOOM_ERROR:"不能再縮放。",ONLY_ONE_TOPIC_MUST_BE_SELECTED:"不能創建節點。僅能選擇一個節點。",ONE_TOPIC_MUST_BE_SELECTED:"不能創建節點。必須選擇一個節點。",ONLY_ONE_TOPIC_MUST_BE_SELECTED_COLLAPSE:"子節點不能折疊。必須選擇一個節點。",SAVE_COULD_NOT_BE_COMPLETED:"保存未完成。稍後再試。",UNEXPECTED_ERROR_LOADING:"抱歉，突遭錯誤，我們無法處理你的請求。\n嘗試重新裝載編輯器。如果問題依然存在請聯繫support@wisemapping.com。",MAIN_TOPIC:"主節點",SUB_TOPIC:"子節點",ISOLATED_TOPIC:"獨立節點",CENTRAL_TOPIC:"中心節點",SHORTCUTS:"快捷鍵",ENTITIES_COULD_NOT_BE_DELETED:"不能刪除節點或者關係。至少應選擇一個對象。",AT_LEAST_ONE_TOPIC_MUST_BE_SELECTED:"至少應選擇一個節點。",CLIPBOARD_IS_EMPTY:"無法拷貝。 粘貼板是空的。",CENTRAL_TOPIC_CAN_NOT_BE_DELETED:"不能刪除根節點。",RELATIONSHIP_COULD_NOT_BE_CREATED:"不能創建關係。 應先選擇創建關係的一對上級節點。",SELECTION_COPIED_TO_CLIPBOARD:"節點已拷貝到粘貼板。",DUMMY:""};mindplot.Messages.BUNDLES.ca={DISCARD_CHANGES:"Descartar els canvis",SAVE:"Desar",INSERT:"Inserir",ZOOM_IN:"Apropar",ZOOM_OUT:"Allunyar",TOPIC_BORDER_COLOR:"Color del bord",TOPIC_SHAPE:"Forma del Tòpic",TOPIC_ADD:"Afegir Tòpic",TOPIC_DELETE:"Esborrar Tòpic",TOPIC_ICON:"Afegir Icona",TOPIC_LINK:"Afegir Enllaç",TOPIC_NOTE:"Afegir Nota",TOPIC_COLOR:"Color del Tòpic",TOPIC_RELATIONSHIP:"Relació",FONT_FAMILY:"Tipus de font",FONT_SIZE:"Mida del text",FONT_BOLD:"Negreta",FONT_ITALIC:"Itàlica",FONT_COLOR:"Color del Text",UNDO:"Refer",NOTE:"Nota",LOADING:"Carregant ...",PRINT:"Imprimir",PUBLISH:"Publicar",REDO:"Desfer",ADD_TOPIC:"Afegir Tòpic",COLLABORATE:"Compartir",EXPORT:"Exportar",HISTORY:"Història",SAVE_COMPLETE:"Desat completat",SAVING:"Gravant ...",ONE_TOPIC_MUST_BE_SELECTED:"No ha estat possible crear un nou tòpic. Com a mínim ha de seleccionar un tòpic.",ONLY_ONE_TOPIC_MUST_BE_SELECTED:"No ha estar possible crear un nou tòpic. Només un tòpic ha d'estar seleccionat.",SAVE_COULD_NOT_BE_COMPLETED:"No s'ha pogut desar. Provi més tard.",UNEXPECTED_ERROR_LOADING:"Ho sentim, un error ha esdevingut inesperadament. Provi recarregant l'editor, si el problema continua contacti a support@wisemapping.com.",ZOOM_ERROR:"No es pot fer més zoom.",ZOOM_IN_ERROR:"El zoom és massa creixent.",MAIN_TOPIC:"Tòpic principal",SUB_TOPIC:"Tòpic secundari",ISOLATED_TOPIC:"Tòpic aïllat",CENTRAL_TOPIC:"Tòpic central",ONLY_ONE_TOPIC_MUST_BE_SELECTED_COLLAPSE:"Els tòpics fills no es poden col·lapsar. Només un tòpic ha d'estar seleccionat.",SHORTCUTS:"Accessos directes",ENTITIES_COULD_NOT_BE_DELETED:"El tòpic o la relució no poden ser esborrats. Com a mínim ha de seleccionar un.",AT_LEAST_ONE_TOPIC_MUST_BE_SELECTED:"Com a mínim ha de seleccionar un tòpic.",CLIPBOARD_IS_EMPTY:"Res a copiar.",CENTRAL_TOPIC_CAN_NOT_BE_DELETED:"El tòpic central no pot esborrar-se.",RELATIONSHIP_COULD_NOT_BE_CREATED:"La relució no s'ha pout drear. Primer has de seleccionar una relució pare.",SELECTION_COPIED_TO_CLIPBOARD:"Tòpics copiats",WRITE_YOUR_TEXT_HERE:"Escriu aquí la teva nota ...",REMOVE:"Esborrar",ACCEPT:"Acceptar",CANCEL:"Cancel·lar",LINK:"Enllaç",OPEN_LINK:"Obrir Enllaç",SESSION_EXPIRED:"La seva sessió ha finalitzat. Si us plau, torni a connectar-se.",DUMMY:""};try{$(document).trigger("loadcomplete","mind")
+}catch(e){console.error(e.stack)
+};

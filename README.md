@@ -21,6 +21,6 @@ Ce dépôt contient également le [logiciel Mindmaps](https://github.com/drichar
 Ce logiciel est sous licence AGPLv3
 La traduction s'est faite directement dans le code html du fichier framindmap.html (= index.html de la version drichard).
 Ce logiciel était proposé par défaut comme service en ligne par l'association Framasoft de 2012 à novembre 2014 sur le site :
-http://framindmap.org/
+https://framindmap.org/
 
 

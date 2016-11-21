@@ -1,0 +1,44 @@
+<html>
+<body>
+<div>
+    <div>
+        <table style="display: inline;width: 100%;">
+            <tbody>
+            <tr>
+                <td height="50px" width="2px"
+                    style="padding: 0; padding-right: 5px; text-align:center;font-weight: normal;font-family: Arial, sans-serif">
+                    <a href="${baseUrl}" style="text-decoration: none">
+                        <h1><span style="color: #6A5687;">Fra</span><span style="color: #9BAE5F;">mindmap</span></h1>
+                    </a>
+                </td>
+                <td valign="bottom" height="32px" style="padding: 0;font-size: 16px;">Cette carte mentale <a
+                        href='${mapEditUrl}'>
+                    ${mindmap.title}</a> a &eacute;t&eacute; partag&eacute;e avec vous.
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <div style="font-size: 13px; background-color: #FFF; padding: 10px 0; min-height: 100px">
+        <p><strong>Message de ${senderMail}&nbsp;: </strong></p>
+        #if($message )
+        <pre style="font-family: Arial, sans-serif; color: #000; ">${message}</pre>
+        #end
+        <p>Cliquez sur le lien suivant pour ouvrir la carte mentale&nbsp;: <a href="${mapEditUrl}">${mindmap.title}</a></p>
+
+        <p>Si vous n&rsquo;avez pas de compte sur Framindmap, vous pouvez cr&eacute;er un compte gratuitement et librement.</p>
+
+        <p>Cordialement,<br/>
+           L&rsquo;&eacute;quipe Framasoft<br/>
+        </p>
+        <p>--<br />«&nbsp;La route est longue, mais la voie est libre...&nbsp;»<br/>
+		Framasoft ne vit que par vos dons (d&eacute;ductibles des imp&ocirc;ts).<br />
+		Merci d&rsquo;avance pour votre soutien <a href="https://soutenir.framasoft.org">https://soutenir.framasoft.org</a>.</p>
+
+    </div>
+</div>
+
+<p style="font-size: 13px;font-family: Arial, sans-serif">Important&nbsp;: Ne r&eacute;pondez pas &agrave; ce mail. Si vous avez besoin d&rsquo;aide ou pensez avoir re&ccedil;u ce mail par erreur, <a href="https://contact.framasoft.org/#framindmap">contactez-nous</a>.
+</p>
+</body>
+</html>

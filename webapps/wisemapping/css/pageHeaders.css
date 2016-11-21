@@ -43,26 +43,26 @@ main {
 
 #header {
     margin-top: 0;
-/*    height: 78px;*/
-/*    width: 100%;*/
+/*    height: 78px;
+    width: 100%;*/
     background: transparent;
-/*    border-bottom: 1px solid #bbb4d6;*/
-/*    position: absolute;
+/*    border-bottom: 1px solid #bbb4d6;
+    position: absolute;
     top: 0;
     left: 0;*/
 }
 
 #headerToolbar {
     height: 35px;
-/*    width: 100%;*/
-    background-color: #eee;
-/*    border-top: 1px solid #999999;
+/*    width: 100%;
+    background-color: #171a17;
+    border-top: 1px solid #999999;
     border-bottom: 1px solid #424141;*/
     color: #666;
 }
 
 #headerContent {
-   /* width: 800px;
+/*    width: 800px;
     height: 78px;*/
     position: relative;
     top: 0;
@@ -163,9 +163,4 @@ div#headerActions a:focus {
     color: white;
     background-color:#767676;
     text-decoration:none;
-}
-
-#dialogMainForm label
-{
-    font-weight:normal;
 }
