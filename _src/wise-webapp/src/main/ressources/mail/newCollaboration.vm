@@ -20,7 +20,7 @@
         </table>
     </div>
     <div style="font-size: 13px; background-color: #FFF; padding: 10px 0; min-height: 100px">
-        <p><strong>Message de ${senderMail}: </strong></p>
+        <p><strong>Message de ${senderMail}&nbsp;: </strong></p>
         #if($message )
         <pre style="font-family: Arial, sans-serif; color: #000; ">${message}</pre>
         #end
@@ -38,7 +38,7 @@
     </div>
 </div>
 
-<p style="font-size: 13px;font-family: Arial, sans-serif">Important&nbsp;: Ne r&eacute;pondez pas &agrave; ce mail. Si vous avez besoin d'aide ou pensez avoir re&ccedil;u ce mail par erreur, <a href="http://contact.framasoft.org">contactez-nous</a>.
+<p style="font-size: 13px;font-family: Arial, sans-serif">Important&nbsp;: Ne r&eacute;pondez pas &agrave; ce mail. Si vous avez besoin d'aide ou pensez avoir re&ccedil;u ce mail par erreur, <a href="https://contact.framasoft.org/#framindmap">contactez-nous</a>.
 </p>
 </body>
 </html>

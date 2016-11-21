@@ -84,7 +84,7 @@ final public class NotificationService {
         final String messageTitle = "Votre nouveau mot de passe a &eacute;t&eacute; cr&eacute;&eacute;";
         final String messageBody =
                 "<p>Quelqu'un, probablement vous, a demand&eacute; &agrave; r&eacuteinitialiser le mot de passe de votre compte Framindmap. </p>\n" +
-                        "<p><strong>Voici votre nouveau mot de passe : " + temporalPassword + "</strong></p>\n" +
+                        "<p><strong>Voici votre nouveau mot de passe&nbsp;: " + temporalPassword + "</strong></p>\n" +
                         "<p>Vous pouvez vous connecter en cliquant <a href=\"" + getBaseUrl() + "/c/login\">sur ce lien</a>. Nous vous encourageons fortement &agrave; changer ce mot de passe le plus rapidement possible.</p>";
 
         sendTemplateMail(user, mailSubject, messageTitle, messageBody);
