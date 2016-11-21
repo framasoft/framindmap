@@ -5288,7 +5288,7 @@ if(x){var w=900;
 var u=500;
 var g=(screen.width/2)-(w/2);
 var s=(screen.height/2)-(u/2);
-x.bind("click",function(J){window.open("https://www.youtube.com/tv?vq=medium#/watch?v=rKxZwNKs9cE","_blank","toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=yes, copyhistory=no, width="+w+", height="+u+", top="+s+", left="+g);
+x.bind("click",function(J){window.open("https://www.framatube.org/media/tutoriel-video-wisemapping-claire-cassaigne/embed_player","_blank","toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=yes, copyhistory=no, width="+w+", height="+u+", top="+s+", left="+g);
 J.preventDefault()
 })
 }},_registerEvents:function(a){var b=this;

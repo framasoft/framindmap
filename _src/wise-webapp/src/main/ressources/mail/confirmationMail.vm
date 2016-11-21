@@ -1,0 +1,33 @@
+<html>
+<body>
+<h3>Bienvenue sur Framindmap !</h3>
+
+<p>
+    Pour activer votre compte et v&eacute;rifier votre adresse e-mail, cliquez sur le lien suivant.
+</p>
+<a href="${emailcheck}">${emailcheck}</a>
+</p>
+<p>
+    Si vous avez re&ccedil;u ce mail par erreur, vous n'avez rien &agrave; faire pour supprimer votre compte. 
+    Votre compte ne sera tout simplement pas activ&eacute; et vous ne recevrez pas d'autre email de notre part.
+</p>
+
+<p>
+    Si vous ne parvenez pas &agrave; cliquer sur le lien ci-dessus, 
+    copiez et coller l'URL dans la barre d'adresse de votre navigateur web.
+</p>
+
+<p>
+    Si vous avez des questions relatives &agrave; l'utilisation de votre compte, <a href="https://contact.framasoft.org/#framindmap">contactez-nous</a>.
+</p>
+
+<p>
+    Cordialement,<br/>
+    L'&eacute;quipe Framasoft.
+</p>
+<p>--<br />"La route est longue, mais la voie est libre..."<br/>
+	Framasoft ne vit que par vos dons (d&eacute;ductibles des imp&ocirc;ts).<br />
+	Merci d'avance pour votre soutien <a href="http://soutenir.framasoft.org">http://soutenir.framasoft.org</a>.</p>
+
+</body>
+</html>
