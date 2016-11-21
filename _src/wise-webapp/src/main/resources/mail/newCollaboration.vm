@@ -26,19 +26,19 @@
         #end
         <p>Cliquez sur le lien suivant pour ouvrir la carte mentale&nbsp;: <a href="${mapEditUrl}">${mindmap.title}</a></p>
 
-        <p>Si vous n'avez pas de compte sur Framindmap, vous pouvez cr&eacute;er un compte gratuitement et librement.</p>
+        <p>Si vous n&rsquo;avez pas de compte sur Framindmap, vous pouvez cr&eacute;er un compte gratuitement et librement.</p>
 
         <p>Cordialement,<br/>
-           L'&eacute;quipe Framasoft<br/>
+           L&rsquo;&eacute;quipe Framasoft<br/>
         </p>
-        <p>--<br />"La route est longue, mais la voie est libre..."<br/>
+        <p>--<br />«&nbsp;La route est longue, mais la voie est libre...&nbsp;»<br/>
 		Framasoft ne vit que par vos dons (d&eacute;ductibles des imp&ocirc;ts).<br />
-		Merci d'avance pour votre soutien <a href="https://soutenir.framasoft.org">https://soutenir.framasoft.org</a>.</p>
+		Merci d&rsquo;avance pour votre soutien <a href="https://soutenir.framasoft.org">https://soutenir.framasoft.org</a>.</p>
 
     </div>
 </div>
 
-<p style="font-size: 13px;font-family: Arial, sans-serif">Important&nbsp;: Ne r&eacute;pondez pas &agrave; ce mail. Si vous avez besoin d'aide ou pensez avoir re&ccedil;u ce mail par erreur, <a href="https://contact.framasoft.org/#framindmap">contactez-nous</a>.
+<p style="font-size: 13px;font-family: Arial, sans-serif">Important&nbsp;: Ne r&eacute;pondez pas &agrave; ce mail. Si vous avez besoin d&rsquo;aide ou pensez avoir re&ccedil;u ce mail par erreur, <a href="https://contact.framasoft.org/#framindmap">contactez-nous</a>.
 </p>
 </body>
 </html>

@@ -83,7 +83,7 @@ final public class NotificationService {
         final String mailSubject = "[Framindmap] Votre nouveau mot de passe";
         final String messageTitle = "Votre nouveau mot de passe a &eacute;t&eacute; cr&eacute;&eacute;";
         final String messageBody =
-                "<p>Quelqu'un, probablement vous, a demand&eacute; &agrave; r&eacuteinitialiser le mot de passe de votre compte Framindmap. </p>\n" +
+                "<p>Quelqu&rsquo;un, probablement vous, a demand&eacute; &agrave; r&eacuteinitialiser le mot de passe de votre compte Framindmap. </p>\n" +
                         "<p><strong>Voici votre nouveau mot de passe&nbsp;: " + temporalPassword + "</strong></p>\n" +
                         "<p>Vous pouvez vous connecter en cliquant <a href=\"" + getBaseUrl() + "/c/login\">sur ce lien</a>. Nous vous encourageons fortement &agrave; changer ce mot de passe le plus rapidement possible.</p>";
 
@@ -94,16 +94,16 @@ final public class NotificationService {
         final String mailSubject = "[Framindmap] Votre mot de passe a été modifié";
         final String messageTitle = "Votre nouveau mot de passe a bien &eacute;t&eacute; modifi&eacute; correctement";
         final String messageBody =
-                "<p>Ceci est juste un mail de confirmation que votre mot de passe a bien &eacute;t&eacute; chang&eacute;. Aucune action suppl&eacute;mentaire n'est requise.</p>";
+                "<p>Ceci est juste un mail de confirmation que votre mot de passe a bien &eacute;t&eacute; chang&eacute;. Aucune action suppl&eacute;mentaire n&rsquo;est requise.</p>";
 
         sendTemplateMail(user, mailSubject, messageTitle, messageBody);
     }
 
     public void newAccountCreated(@NotNull User user) {
         final String mailSubject = "Bienvenue dans Framindmap !";
-        final String messageTitle = "Votre compte a &eacute;t&eacute; cr&eacute;&eacute; avec succ&eagrave;s";
+        final String messageTitle = "Votre compte a &eacute;t&eacute; cr&eacute;&eacute; avec succ&egrave;s";
         final String messageBody =
-                "<p>Merci de l'int&eacute;r&ecirc;t que vous portez &agrave; Framindmap. Si vous avez des remarques ou id&eacute;es d'am&eacute;lioration, envoyez nous un email sur <a href=\"https://contact.framasoft.org/#framindmap\">contact.framasoft.org</a>.</p>";
+                "<p>Merci de l&rsquo;int&eacute;r&ecirc;t que vous portez &agrave; Framindmap. Si vous avez des remarques ou id&eacute;es d&rsquo;am&eacute;lioration, envoyez nous un email sur <a href=\"https://contact.framasoft.org/#framindmap\">contact.framasoft.org</a>.</p>";
         sendTemplateMail(user, mailSubject, messageTitle, messageBody);
     }
 

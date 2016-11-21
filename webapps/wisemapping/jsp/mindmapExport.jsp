@@ -7,7 +7,7 @@
         <spring:message code="EXPORT_DETAILS"/>
     </div>
     <div class="alert alert-warning" role="alert">
-        Contrairement à ce qui est indiqué dans le tutoriel vidéo, <b>les exports en pdf ou en jpg/png ne fonctionnent pas</b> sur cette version de Wisemapping. Nous les avons donc désactivés. Si une version plus récente du logiciel corrige ce bug, nous les proposerons à nouveau.
+        Contrairement à ce qui est indiqué dans le tutoriel vidéo, <b>les exports en pdf ou en jpg/png ne fonctionnent pas</b> sur cette version de Wisemapping. Nous les avons donc désactivés.
     </div>
     <form method="GET" class="form-horizontal" action="c/restful/maps/${mindmap.id}"
           enctype="application/x-www-form-urlencoded" id="dialogMainForm">
@@ -75,9 +75,9 @@
             </label>-->
         </fieldset>
     </form>
-    <div id="exportInfo" style="margin-top: 19px;">
+    <!--<div id="exportInfo" style="margin-top: 19px;">
         <span class="label label-danger">Warning</span> <spring:message code="EXPORT_FORMAT_RESTRICTIONS"/>
-    </div>
+    </div>-->
 
 </div>
 
