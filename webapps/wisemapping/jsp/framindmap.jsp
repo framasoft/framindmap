@@ -20,7 +20,7 @@
                   <li>et vous pouvez même les insérer dans votre site web.</li>
 	      </ul>
          </div>
-     </div>     
+     </div>
      <div id="Formulaire" style="display:none" class="row"></div>
      <hr/>
      <div class="row">
@@ -45,6 +45,7 @@
                             <source src="https://www.framatube.org/files/1288-tutoriel-video-wisemapping-claire-cassaigne.webm" type="video/webm"/>
                         </video></p>
                         <p>-&gt; La <a href="https://www.framatube.org/files/1288-tutoriel-video-wisemapping-claire-cassaigne.webm?download=1">vidéo</a> au format webm</p>
+                        <p><b>Attention</b> : Sur la version actuellement installée de Wisemapping, <b>l’export en pdf ou jpg/png ne fonctionne pas</b>. Nous avons donc désactivé cette fonctionnalité. Lorsqu’une version plus récente du logiciel corrigera ce bug, nous la proposerons à nouveau.</p>
                    </div>
                    <div class="modal-footer"><a href="#" class="btn btn-default" data-dismiss="modal">Fermer</a></div>
                </div>
@@ -70,7 +71,7 @@
 	<div class="col-md-4">
 		<h2>Cultivez votre jardin</h2>
                 <p class="text-center"><span class="glyphicon glyphicon-tree-deciduous" style="font-size:50px"></span>
-		<p>Pour participer au développement du logiciel, proposer des améliorations 
+		<p>Pour participer au développement du logiciel, proposer des améliorations
 		ou simplement le télécharger, rendez-vous sur <a href="https://bitbucket.org/wisemapping/wisemapping-open-source">le site de développement</a>.</p>
 		<br />
 		<p>Si vous souhaitez installer ce logiciel pour votre propre usage et ainsi gagner en autonomie, nous vous aidons sur :</p>
@@ -81,11 +82,11 @@
      <div class="row">
          <div class="col-md-8 col-md-offset-2">
 	     <div class="alert alert-warning" style="min-height:230px">
-                <img src="/images/mindmaps.png" alt="" style="height:200px; float:right" />  
+                <img src="/images/mindmaps.png" alt="" style="height:200px; float:right" />
 		<h4 class="alert-heading">Mindmaps</h4>
 		<p>Auparavant, Framindmap reposait sur le logiciel <a href="https://github.com/drichard/mindmaps">Mindmaps</a> de David Richard.<br />
 		<strong>Ce logiciel dispose d'une interface plus simple et ne nécessite ni de créer un compte ni de faire transiter vos données sur notre serveur</strong>.
-		Si vous le souhaitez vous pouvez toujours l'utiliser ici&nbsp;:</p> 
+		Si vous le souhaitez vous pouvez toujours l'utiliser ici&nbsp;:</p>
 		<p class="text-center"><a class="btn btn-info" href="/framindmap.html">Créer une carte mentale avec Mindmaps »</a></p>
 	     </div>
          </div>
